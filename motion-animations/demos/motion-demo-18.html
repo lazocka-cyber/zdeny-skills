@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Motion — Speciální Efekty</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{min-height:100vh;background:#08080e;font-family:-apple-system,system-ui,sans-serif;color:#f0f4ff;padding:20px 14px 40px;overflow-x:hidden;}
+  .header{text-align:center;margin-bottom:22px;}
+  .header .label{font-size:10px;letter-spacing:5px;color:#ec4899;text-transform:uppercase;margin-bottom:6px;}
+  .header h1{font-size:22px;font-weight:800;background:linear-gradient(90deg,#ec4899,#a78bfa,#7EC8E3);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+  .tabs{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;margin-bottom:22px;scrollbar-width:none;}
+  .tabs::-webkit-scrollbar{display:none;}
+  .tab{flex-shrink:0;padding:8px 14px;border-radius:20px;border:none;cursor:pointer;font-size:12px;font-weight:600;background:rgba(255,255,255,0.07);color:#8892b0;transition:all .22s;-webkit-tap-highlight-color:transparent;}
+  .tab.active{background:linear-gradient(90deg,#ec4899,#a78bfa);color:#fff;}
+  .panel{display:none;max-width:480px;margin:0 auto;}
+  .panel.active{display:block;animation:fadeIn .3s ease both;}
+  .hint{text-align:center;color:#8892b0;font-size:13px;margin-bottom:16px;}
+  .tip{text-align:center;font-size:11px;color:#2a2a3a;margin-top:14px;}
+  .canvas-wrap{border-radius:16px;overflow:hidden;}
+  canvas{display:block;width:100%;}
+  .ctrl-row{display:flex;gap:8px;margin-top:12px;justify-content:center;flex-wrap:wrap;}
+  .ctrl-btn{padding:8px 16px;border-radius:20px;border:1px solid rgba(236,72,153,0.2);background:transparent;color:#555;font-size:11px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:all .2s;-webkit-tap-highlight-color:transparent;}
+  .ctrl-btn:active,.ctrl-btn.active-ctrl{border-color:#ec4899;color:#ec4899;}
+  @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="label">Motion · Speciální</div>
+  <h1>✨ SPECIAL EFFECTS</h1>
+</div>
+<div class="tabs">
+  <button class="tab active" onclick="showPanel('cursor',this)">🖱 Cursor trail</button>
+  <button class="tab" onclick="showPanel('magnetic',this)">🧲 Magnetické</button>
+  <button class="tab" onclick="showPanel('ripple',this)">💧 Ripple</button>
+  <button class="tab" onclick="showPanel('mirror',this)">🪞 Zrcadlo</button>
+  <button class="tab" onclick="showPanel('gravity',this)">🌍 Gravitace</button>
+</div>
+
+<!-- CURSOR TRAIL -->
+<div id="panel-cursor" class="panel active">
+  <p class="hint">Pohybuj prstem — zanech stopu</p>
+  <div class="canvas-wrap"><canvas id="c-cursor" height="320"></canvas></div>
+  <div class="ctrl-row">
+    <button class="ctrl-btn active-ctrl" onclick="setCursorMode(0,this)">Hvězdy</button>
+    <button class="ctrl-btn" onclick="setCursorMode(1,this)">Bubliny</button>
+    <button class="ctrl-btn" onclick="setCursorMode(2,this)">Oheň</button>
+    <button class="ctrl-btn" onclick="setCursorMode(3,this)">Duha</button>
+  </div>
+  <p class="tip">→ Magický cursor efekt, wow faktor na landing page</p>
+</div>
+
+<!-- MAGNETIC FIELDS -->
+<div id="panel-magnetic" class="panel">
+  <p class="hint">Přibliž prst — prvky se přitahují</p>
+  <div class="canvas-wrap"><canvas id="c-magnetic" height="320"></canvas></div>
+  <div class="ctrl-row">
+    <button class="ctrl-btn active-ctrl" onclick="setMagMode(0,this)">Přitahovat</button>
+    <button class="ctrl-btn" onclick="setMagMode(1,this)">Odpuzovat</button>
+    <button class="ctrl-btn" onclick="setMagMode(2,this)">Víříme</button>
+  </div>
+  <p class="tip">→ Interaktivní hero sekce, vizualizace sil</p>
+</div>
+
+<!-- RIPPLE POND -->
+<div id="panel-ripple" class="panel">
+  <p class="hint">Klepni — vytvoř vlnky jako na vodě</p>
+  <div class="canvas-wrap"><canvas id="c-ripple" height="320"></canvas></div>
+  <div class="ctrl-row">
+    <button class="ctrl-btn active-ctrl" onclick="setRippleMode(0,this)">Voda</button>
+    <button class="ctrl-btn" onclick="setRippleMode(1,this)">Energie</button>
+    <button class="ctrl-btn" onclick="setRippleMode(2,this)">Zlatá</button>
+  </div>
+  <p class="tip">→ Kliknutí na tlačítko, tap feedback, meditační vizuál</p>
+</div>
+
+<!-- MIRROR -->
+<div id="panel-mirror" class="panel">
+  <p class="hint">Pohybuj prstem — symetrie</p>
+  <div class="canvas-wrap"><canvas id="c-mirror" height="320"></canvas></div>
+  <div class="ctrl-row">
+    <button class="ctrl-btn active-ctrl" onclick="setMirrorAxes(2,this)">2 osy</button>
+    <button class="ctrl-btn" onclick="setMirrorAxes(4,this)">4 osy</button>
+    <button class="ctrl-btn" onclick="setMirrorAxes(8,this)">8 os</button>
+    <button class="ctrl-btn" onclick="clearMirror()">Vymazat</button>
+  </div>
+  <p class="tip">→ Mandala efekt, dekorativní generativní umění</p>
+</div>
+
+<!-- GRAVITY -->
+<div id="panel-gravity" class="panel">
+  <p class="hint">Nakloň telefon — koule padají</p>
+  <div class="canvas-wrap"><canvas id="c-gravity" height="320"></canvas></div>
+  <div class="ctrl-row">
+    <button class="ctrl-btn active-ctrl" onclick="setGravityMode(0,this)">Koule</button>
+    <button class="ctrl-btn" onclick="setGravityMode(1,this)">Hvězdy</button>
+    <button class="ctrl-btn" onclick="addGravityBalls()">+ Přidat</button>
+  </div>
+  <p class="tip">→ Fyzikální simulace, gamifikace, interaktivní prvky</p>
+</div>
+
+<script>
+
+function rrect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+function lerp(a,b,t){return a+(b-a)*t}
+function rand(a,b){return a+Math.random()*(b-a)}
+function setupCanvas(id){
+  const c=document.getElementById(id),dpr=window.devicePixelRatio||1;
+  const rect=c.parentElement.getBoundingClientRect();
+  c.width=rect.width*dpr;c.height=320*dpr;
+  c.style.width=rect.width+"px";c.style.height="320px";
+  const ctx=c.getContext("2d");ctx.scale(dpr,dpr);
+  return{canvas:c,ctx,w:rect.width,h:320};
+}
+
+/* ══ CURSOR TRAIL ══ */
+let cursorRAF,cursorMode=0;
+const cursorModes=[
+  {name:"stars",spawn:(x,y)=>({x,y,vx:rand(-1.5,1.5),vy:rand(-2,0),life:1,decay:0.03,size:rand(2,5),color:`hsl(${rand(200,280)},80%,70%)`})},
+  {name:"bubbles",spawn:(x,y)=>({x,y,vx:rand(-0.5,0.5),vy:rand(-0.5,-1.5),life:1,decay:0.015,size:rand(4,12),color:`hsla(${rand(180,240)},70%,65%,0.6)`})},
+  {name:"fire",spawn:(x,y)=>({x,y,vx:rand(-0.8,0.8),vy:rand(-2,-4),life:1,decay:0.04,size:rand(3,8),color:`hsl(${rand(0,40)},100%,${rand(50,70)}%)`})},
+  {name:"rainbow",spawn:(x,y)=>({x,y,vx:rand(-1,1),vy:rand(-1.5,0.5),life:1,decay:0.025,size:rand(3,7),color:`hsl(${Math.random()*360},85%,65%)`})},
+];
+function initCursor(){
+  cancelAnimationFrame(cursorRAF);
+  const{canvas,ctx,w,h}=setupCanvas("c-cursor");
+  let particles=[],mx=-1,my=-1,painting=false;
+  function addParticles(x,y){
+    for(let i=0;i<4;i++)particles.push(cursorModes[cursorMode].spawn(x,y));
+  }
+  canvas.addEventListener("mousemove",e=>{const r=canvas.getBoundingClientRect();mx=e.clientX-r.left;my=e.clientY-r.top;addParticles(mx,my);});
+  canvas.addEventListener("touchmove",e=>{const r=canvas.getBoundingClientRect();mx=e.touches[0].clientX-r.left;my=e.touches[0].clientY-r.top;addParticles(mx,my);e.preventDefault();},{passive:false});
+  function tick(){
+    ctx.fillStyle="rgba(8,8,14,0.2)";ctx.fillRect(0,0,w,h);
+    particles=particles.filter(p=>p.life>0);
+    particles.forEach(p=>{
+      p.x+=p.vx;p.y+=p.vy;p.life-=p.decay;
+      if(cursorMode===1){p.size*=0.98;}
+      ctx.beginPath();
+      if(cursorMode===1){ctx.arc(p.x,p.y,p.size,0,Math.PI*2);ctx.strokeStyle=p.color;ctx.lineWidth=1;ctx.globalAlpha=p.life*0.6;ctx.stroke();}
+      else{ctx.arc(p.x,p.y,p.size*p.life,0,Math.PI*2);ctx.fillStyle=p.color;ctx.globalAlpha=p.life;ctx.fill();}
+      // glow
+      if(cursorMode===3){ctx.beginPath();ctx.arc(p.x,p.y,p.size*3,0,Math.PI*2);ctx.fillStyle=p.color.replace(")",",0.1)").replace("hsl","hsla");ctx.globalAlpha=p.life*0.3;ctx.fill();}
+      ctx.globalAlpha=1;
+    });
+    // cursor dot
+    if(mx>0){ctx.beginPath();ctx.arc(mx,my,6,0,Math.PI*2);ctx.fillStyle=cursorModes[cursorMode].spawn(0,0).color;ctx.globalAlpha=0.8;ctx.fill();ctx.globalAlpha=1;}
+    cursorRAF=requestAnimationFrame(tick);
+  }
+  cursorRAF=requestAnimationFrame(tick);
+}
+function setCursorMode(m,btn){cursorMode=m;document.querySelectorAll("#panel-cursor .ctrl-btn").forEach(b=>b.classList.remove("active-ctrl"));btn.classList.add("active-ctrl");}
+
+/* ══ MAGNETIC ══ */
+let magRAF,magMode=0;
+function initMagnetic(){
+  cancelAnimationFrame(magRAF);
+  const{canvas,ctx,w,h}=setupCanvas("c-magnetic");
+  let mx=w/2,my=h/2;
+  const dots=Array.from({length:40},(_,i)=>({
+    x:rand(w*0.1,w*0.9),y:rand(h*0.1,h*0.9),
+    ox:0,oy:0,vx:0,vy:0,
+    hue:i*9,size:3+Math.random()*3,
+  }));
+  canvas.addEventListener("mousemove",e=>{const r=canvas.getBoundingClientRect();mx=e.clientX-r.left;my=e.clientY-r.top;});
+  canvas.addEventListener("touchmove",e=>{const r=canvas.getBoundingClientRect();mx=e.touches[0].clientX-r.left;my=e.touches[0].clientY-r.top;e.preventDefault();},{passive:false});
+  function tick(t){
+    ctx.fillStyle="rgba(8,8,14,0.25)";ctx.fillRect(0,0,w,h);
+    dots.forEach(d=>{
+      const dx=mx-d.x,dy=my-d.y,dist=Math.sqrt(dx*dx+dy*dy)||1;
+      const maxR=150,force=(maxR-Math.min(dist,maxR))/maxR;
+      if(magMode===0){d.vx+=dx/dist*force*1.2;d.vy+=dy/dist*force*1.2;}
+      else if(magMode===1){d.vx-=dx/dist*force*1.5;d.vy-=dy/dist*force*1.5;}
+      else{d.vx+=(-dy/dist)*force*1.2;d.vy+=(dx/dist)*force*1.2;}
+      d.vx*=0.92;d.vy*=0.92;
+      d.x+=d.vx;d.y+=d.vy;
+      if(d.x<0){d.x=0;d.vx*=-0.5;}if(d.x>w){d.x=w;d.vx*=-0.5;}
+      if(d.y<0){d.y=0;d.vy*=-0.5;}if(d.y>h){d.y=h;d.vy*=-0.5;}
+      const speed=Math.sqrt(d.vx*d.vx+d.vy*d.vy);
+      ctx.beginPath();ctx.arc(d.x,d.y,d.size,0,Math.PI*2);
+      ctx.fillStyle=`hsl(${d.hue+t/50},80%,${55+speed*5}%)`;ctx.fill();
+      // field lines
+      if(dist<100){ctx.beginPath();ctx.moveTo(d.x,d.y);ctx.lineTo(d.x+d.vx*5,d.y+d.vy*5);ctx.strokeStyle=`hsla(${d.hue},80%,65%,0.3)`;ctx.lineWidth=1;ctx.stroke();}
+    });
+    // cursor ring
+    ctx.beginPath();ctx.arc(mx,my,30,0,Math.PI*2);
+    ctx.strokeStyle="rgba(236,72,153,0.3)";ctx.lineWidth=1;ctx.stroke();
+    ctx.beginPath();ctx.arc(mx,my,4,0,Math.PI*2);
+    ctx.fillStyle="#ec4899";ctx.fill();
+    magRAF=requestAnimationFrame(tick);
+  }
+  magRAF=requestAnimationFrame(tick);
+}
+function setMagMode(m,btn){magMode=m;document.querySelectorAll("#panel-magnetic .ctrl-btn").forEach(b=>b.classList.remove("active-ctrl"));btn.classList.add("active-ctrl");}
+
+/* ══ RIPPLE POND ══ */
+let rippleRAF,rippleMode=0,ripples=[];
+const ripplePals=[[{r:100,g:180,b:255}],[{r:167,g:139,b:250}],[{r:251,g:191,b:36}]];
+function initRipple(){
+  cancelAnimationFrame(rippleRAF);
+  const{canvas,ctx,w,h}=setupCanvas("c-ripple");
+  ripples=[];
+  // auto ripples
+  function autoRipple(){if(ripples.length<5)ripples.push({x:rand(w*0.2,w*0.8),y:rand(h*0.2,h*0.8),r:0,maxR:rand(60,120),alpha:0.8,speed:rand(1.5,3)});}
+  const autoInt=setInterval(autoRipple,1200);
+  canvas.addEventListener("click",e=>{const r2=canvas.getBoundingClientRect();ripples.push({x:e.clientX-r2.left,y:e.clientY-r2.top,r:0,maxR:120,alpha:1,speed:2.5});});
+  canvas.addEventListener("touchstart",e=>{const r2=canvas.getBoundingClientRect();ripples.push({x:e.touches[0].clientX-r2.left,y:e.touches[0].clientY-r2.top,r:0,maxR:120,alpha:1,speed:2.5});e.preventDefault();},{passive:false});
+  function tick(){
+    ctx.fillStyle="rgba(8,8,14,0.3)";ctx.fillRect(0,0,w,h);
+    const pal=ripplePals[rippleMode][0];
+    ripples=ripples.filter(r=>r.alpha>0.01);
+    ripples.forEach(r=>{
+      r.r+=r.speed;r.alpha-=0.012;
+      // multiple rings per ripple
+      for(let i=0;i<3;i++){
+        const rr=r.r-i*15;if(rr<0)continue;
+        const alpha=r.alpha*(1-i*0.25);
+        ctx.beginPath();ctx.arc(r.x,r.y,rr,0,Math.PI*2);
+        ctx.strokeStyle=`rgba(${pal.r},${pal.g},${pal.b},${alpha})`;
+        ctx.lineWidth=2-i*0.5;ctx.stroke();
+      }
+      // center glow
+      if(r.r<20){const g=ctx.createRadialGradient(r.x,r.y,0,r.x,r.y,20);g.addColorStop(0,`rgba(${pal.r},${pal.g},${pal.b},${r.alpha*0.4})`);g.addColorStop(1,"transparent");ctx.fillStyle=g;ctx.fillRect(0,0,w,h);}
+    });
+    rippleRAF=requestAnimationFrame(tick);
+    // cleanup interval on panel switch handled by cancelAnimationFrame
+    if(!document.getElementById("panel-ripple").classList.contains("active"))clearInterval(autoInt);
+  }
+  rippleRAF=requestAnimationFrame(tick);
+}
+function setRippleMode(m,btn){rippleMode=m;document.querySelectorAll("#panel-ripple .ctrl-btn").forEach(b=>b.classList.remove("active-ctrl"));btn.classList.add("active-ctrl");}
+
+/* ══ MIRROR / MANDALA ══ */
+let mirrorAxes=2,mirrorPainting=false,mirrorLastX=-1,mirrorLastY=-1;
+function initMirror(){
+  const{canvas,ctx,w,h}=setupCanvas("c-mirror");
+  ctx.fillStyle="#08080e";ctx.fillRect(0,0,w,h);
+  function paint(x,y){
+    if(mirrorLastX<0){mirrorLastX=x;mirrorLastY=y;return;}
+    const cx=w/2,cy=h/2;
+    for(let i=0;i<mirrorAxes;i++){
+      const angle=i*(Math.PI*2/mirrorAxes);
+      ctx.save();ctx.translate(cx,cy);ctx.rotate(angle);
+      ctx.beginPath();ctx.moveTo(mirrorLastX-cx,mirrorLastY-cy);ctx.lineTo(x-cx,y-cy);
+      const hue=(Date.now()/20)%360;
+      ctx.strokeStyle=`hsla(${hue},80%,65%,0.8)`;ctx.lineWidth=2;ctx.lineCap="round";ctx.stroke();
+      // reflection
+      ctx.save();ctx.scale(1,-1);
+      ctx.beginPath();ctx.moveTo(mirrorLastX-cx,-(mirrorLastY-cy));ctx.lineTo(x-cx,-(y-cy));
+      ctx.stroke();ctx.restore();
+      ctx.restore();
+    }
+    mirrorLastX=x;mirrorLastY=y;
+  }
+  const c=document.getElementById("c-mirror");
+  c.addEventListener("mousedown",e=>{mirrorPainting=true;mirrorLastX=-1;mirrorLastY=-1;const r=c.getBoundingClientRect();paint(e.clientX-r.left,e.clientY-r.top);});
+  c.addEventListener("mousemove",e=>{if(!mirrorPainting)return;const r=c.getBoundingClientRect();paint(e.clientX-r.left,e.clientY-r.top);});
+  c.addEventListener("mouseup",()=>{mirrorPainting=false;mirrorLastX=-1;mirrorLastY=-1;});
+  c.addEventListener("touchstart",e=>{mirrorPainting=true;mirrorLastX=-1;mirrorLastY=-1;const r=c.getBoundingClientRect();paint(e.touches[0].clientX-r.left,e.touches[0].clientY-r.top);e.preventDefault();},{passive:false});
+  c.addEventListener("touchmove",e=>{if(!mirrorPainting)return;const r=c.getBoundingClientRect();paint(e.touches[0].clientX-r.left,e.touches[0].clientY-r.top);e.preventDefault();},{passive:false});
+  c.addEventListener("touchend",()=>{mirrorPainting=false;mirrorLastX=-1;mirrorLastY=-1;});
+  // hint
+  const{ctx:ctx2}=setupCanvas("c-mirror");
+  ctx2.fillStyle="#08080e";ctx2.fillRect(0,0,w,h);
+  ctx2.fillStyle="#2a2a3a";ctx2.font=`14px sans-serif`;ctx2.textAlign="center";ctx2.textBaseline="middle";ctx2.fillText("Kresli prstem →",w/2,h/2);
+}
+function setMirrorAxes(n,btn){mirrorAxes=n;document.querySelectorAll("#panel-mirror .ctrl-btn").slice(0,3).forEach(b=>b.classList.remove("active-ctrl"));btn.classList.add("active-ctrl");}
+function clearMirror(){const{ctx,w,h}=setupCanvas("c-mirror");ctx.fillStyle="#08080e";ctx.fillRect(0,0,w,h);ctx.fillStyle="#2a2a3a";ctx.font="14px sans-serif";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText("Kresli prstem →",w/2,h/2);}
+
+/* ══ GRAVITY ══ */
+let gravRAF,gravMode=0,gravBalls=[];
+function initGravity(){
+  cancelAnimationFrame(gravRAF);
+  const{canvas,ctx,w,h}=setupCanvas("c-gravity");
+  gravBalls=Array.from({length:15},(_,i)=>({
+    x:rand(20,w-20),y:rand(20,h/2),
+    vx:rand(-1,1),vy:0,
+    r:8+Math.random()*12,
+    hue:i*25,
+    mass:1+Math.random()*2,
+  }));
+  let gx=0,gy=0.3;
+  // device orientation (works on mobile, fallback to mouse on desktop)
+  window.addEventListener("deviceorientation",e=>{
+    try{if(e.gamma!==null&&e.beta!==null){gx=e.gamma/90*0.5;gy=Math.max(0.05,e.beta/90*0.5+0.15);}}catch(err){}
+  },{passive:true});
+  // desktop fallback - tilt with mouse
+  canvas.addEventListener("mousemove",e=>{
+    const r=canvas.getBoundingClientRect();
+    gx=(e.clientX-r.left-w/2)/w*0.6;
+    gy=0.25+(e.clientY-r.top-h/2)/h*0.2;
+  });
+  canvas.addEventListener("click",e=>{const r=canvas.getBoundingClientRect();const mx=e.clientX-r.left,my=e.clientY-r.top;gravBalls.push({x:mx,y:my,vx:rand(-2,2),vy:rand(-3,0),r:rand(8,18),hue:Math.random()*360,mass:rand(1,3)});});
+  canvas.addEventListener("touchstart",e=>{const r=canvas.getBoundingClientRect();const mx=e.touches[0].clientX-r.left,my=e.touches[0].clientY-r.top;gravBalls.push({x:mx,y:my,vx:rand(-2,2),vy:rand(-3,0),r:rand(8,18),hue:Math.random()*360,mass:rand(1,3)});e.preventDefault();},{passive:false});
+  function tick(){
+    ctx.fillStyle="rgba(8,8,14,0.3)";ctx.fillRect(0,0,w,h);
+    // ground
+    ctx.fillStyle="rgba(255,255,255,0.04)";ctx.fillRect(0,h-8,w,8);
+    gravBalls.forEach(b=>{
+      b.vx+=gx;b.vy+=gy;
+      b.vx*=0.99;b.vy*=0.99;
+      b.x+=b.vx;b.y+=b.vy;
+      // walls
+      if(b.x-b.r<0){b.x=b.r;b.vx*=-0.7;}
+      if(b.x+b.r>w){b.x=w-b.r;b.vx*=-0.7;}
+      if(b.y-b.r<0){b.y=b.r;b.vy*=-0.7;}
+      if(b.y+b.r>h-8){b.y=h-8-b.r;b.vy*=-0.6;b.vx*=0.95;}
+      // ball collisions
+      gravBalls.forEach(b2=>{
+        if(b===b2)return;
+        const dx=b2.x-b.x,dy=b2.y-b.y,dist=Math.sqrt(dx*dx+dy*dy)||1;
+        if(dist<b.r+b2.r){
+          const nx=dx/dist,ny=dy/dist;
+          const relV=(b.vx-b2.vx)*nx+(b.vy-b2.vy)*ny;
+          if(relV>0)return;
+          b.vx-=nx*relV;b.vy-=ny*relV;
+          b2.vx+=nx*relV;b2.vy+=ny*relV;
+        }
+      });
+      const g=ctx.createRadialGradient(b.x-b.r*0.3,b.y-b.r*0.3,0,b.x,b.y,b.r);
+      if(gravMode===0){
+        g.addColorStop(0,`hsl(${b.hue},80%,75%)`);
+        g.addColorStop(1,`hsl(${b.hue},80%,40%)`);
+        ctx.beginPath();ctx.arc(b.x,b.y,b.r,0,Math.PI*2);ctx.fillStyle=g;ctx.fill();
+      } else {
+        // star shape
+        ctx.save();ctx.translate(b.x,b.y);
+        ctx.beginPath();
+        for(let i=0;i<5;i++){
+          const a=i/5*Math.PI*2-Math.PI/2;
+          const bi=(i+0.5)/5*Math.PI*2-Math.PI/2;
+          i===0?ctx.moveTo(Math.cos(a)*b.r,Math.sin(a)*b.r):ctx.lineTo(Math.cos(a)*b.r,Math.sin(a)*b.r);
+          ctx.lineTo(Math.cos(bi)*b.r*0.4,Math.sin(bi)*b.r*0.4);
+        }
+        ctx.closePath();ctx.fillStyle=`hsl(${b.hue},90%,65%)`;ctx.fill();
+        ctx.restore();
+      }
+    });
+    gravRAF=requestAnimationFrame(tick);
+  }
+  gravRAF=requestAnimationFrame(tick);
+}
+function setGravityMode(m,btn){gravMode=m;document.querySelectorAll("#panel-gravity .ctrl-btn").slice(0,2).forEach(b=>b.classList.remove("active-ctrl"));btn.classList.add("active-ctrl");}
+function addGravityBalls(){const{w,h}=setupCanvas("c-gravity");for(let i=0;i<5;i++)gravBalls.push({x:rand(20,w-20),y:rand(20,h/2),vx:rand(-2,2),vy:rand(-3,0),r:rand(8,18),hue:Math.random()*360,mass:rand(1,3)});}
+
+/* ══ TABS ══ */
+function showPanel(name,btn){
+  cancelAnimationFrame(cursorRAF);cancelAnimationFrame(magRAF);cancelAnimationFrame(rippleRAF);cancelAnimationFrame(gravRAF);
+  document.querySelectorAll(".panel").forEach(p=>p.classList.remove("active"));
+  document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
+  document.getElementById("panel-"+name).classList.add("active");
+  if(btn)btn.classList.add("active");
+  if(name==="cursor")setTimeout(initCursor,50);
+  if(name==="magnetic")setTimeout(initMagnetic,50);
+  if(name==="ripple")setTimeout(initRipple,50);
+  if(name==="mirror")setTimeout(initMirror,50);
+  if(name==="gravity")setTimeout(initGravity,50);
+}
+setTimeout(initCursor,200);
+</script>
+</body>
+</html>

@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Motion — Geometrie</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    min-height: 100vh;
+    background: #0a0a0a;
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    color: #f0f0f0;
+    padding: 20px 14px 40px;
+    overflow-x: hidden;
+  }
+
+  .header {
+    text-align: center; margin-bottom: 28px;
+    animation: fadeIn 0.6s ease both;
+  }
+  .header .label {
+    font-size: 10px; letter-spacing: 6px; color: #555;
+    text-transform: uppercase; margin-bottom: 8px;
+  }
+  .header h1 {
+    font-size: 22px; font-weight: 300; color: #fff;
+    letter-spacing: 2px;
+  }
+
+  .tabs {
+    display: flex; gap: 0; overflow-x: auto;
+    margin-bottom: 28px; scrollbar-width: none;
+    border-bottom: 1px solid #1a1a1a;
+  }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab {
+    flex-shrink: 0; padding: 10px 16px;
+    border: none; cursor: pointer; font-size: 11px;
+    font-weight: 500; letter-spacing: 2px; text-transform: uppercase;
+    background: transparent; color: #444;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    transition: all 0.2s; -webkit-tap-highlight-color: transparent;
+  }
+  .tab.active { color: #fff; border-bottom-color: #fff; }
+
+  .panel { display: none; max-width: 480px; margin: 0 auto; }
+  .panel.active { display: block; animation: fadeIn 0.3s ease both; }
+  .hint { text-align: center; color: #444; font-size: 11px; letter-spacing: 1px; margin-bottom: 24px; text-transform: uppercase; }
+  .tip  { text-align: center; font-size: 10px; color: #333; margin-top: 20px; letter-spacing: 1px; }
+
+  /* ══ CANVAS WRAPPER ══ */
+  .canvas-wrap {
+    background: #0f0f0f;
+    border: 1px solid #1a1a1a;
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+  }
+  canvas { display: block; width: 100%; }
+
+  .ctrl-row {
+    display: flex; gap: 8px; margin-top: 12px; justify-content: center; flex-wrap: wrap;
+  }
+  .ctrl-btn {
+    padding: 8px 18px; border-radius: 2px;
+    border: 1px solid #2a2a2a; background: transparent;
+    color: #888; font-size: 11px; letter-spacing: 2px;
+    text-transform: uppercase; cursor: pointer;
+    transition: all 0.2s; -webkit-tap-highlight-color: transparent;
+  }
+  .ctrl-btn:hover, .ctrl-btn:active { border-color: #fff; color: #fff; }
+  .ctrl-btn.active-ctrl { border-color: #fff; color: #fff; }
+
+  @keyframes fadeIn { from{opacity:0}to{opacity:1} }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="label">Motion · Geometrie</div>
+  <h1>LINES & SHAPES</h1>
+</div>
+
+<div class="tabs">
+  <button class="tab active" onclick="showPanel('lines')">Čáry</button>
+  <button class="tab" onclick="showPanel('morph')">Morph</button>
+  <button class="tab" onclick="showPanel('grid')">Mřížka</button>
+  <button class="tab" onclick="showPanel('particles')">Částice</button>
+  <button class="tab" onclick="showPanel('type')">Písmo</button>
+</div>
+
+<!-- 1. LINES -->
+<div id="panel-lines" class="panel active">
+  <p class="hint">Klepni — čáry reagují</p>
+  <div class="canvas-wrap">
+    <canvas id="c-lines" height="320"></canvas>
+  </div>
+  <div class="ctrl-row">
+    <button class="ctrl-btn active-ctrl" onclick="setLinesMode('flow',this)">Flow</button>
+    <button class="ctrl-btn" onclick="setLinesMode('scatter',this)">Scatter</button>
+    <button class="ctrl-btn" onclick="setLinesMode('grid',this)">Grid</button>
+  </div>
+  <p class="tip">→ Hero animace, loading screen, pozadí portfolia</p>
+</div>
+
+<!-- 2. MORPH -->
+<div id="panel-morph" class="panel">
+  <p class="hint">Tvary plynule přecházejí</p>
+  <div class="canvas-wrap">
+    <canvas id="c-morph" height="320"></canvas>
+  </div>
+  <div class="ctrl-row">
+    <button class="ctrl-btn active-ctrl" onclick="setMorphShape(0,this)">Kruh</button>
+    <button class="ctrl-btn" onclick="setMorphShape(1,this)">Čtverec</button>
+    <button class="ctrl-btn" onclick="setMorphShape(2,this)">Trojúh.</button>
+    <button class="ctrl-btn" onclick="setMorphShape(3,this)">Hvězda</button>
+  </div>
+  <p class="tip">→ Logo animace, brand reveal, přechod mezi sekcemi</p>
+</div>
+
+<!-- 3. GRID -->
+<div id="panel-grid" class="panel">
+  <p class="hint">Klepni — vlna se rozšíří</p>
+  <div class="canvas-wrap">
+    <canvas id="c-grid" height="320"></canvas>
+  </div>
+  <div class="ctrl-row">
+    <button class="ctrl-btn active-ctrl" onclick="triggerGridWave()">Spustit vlnu</button>
+    <button class="ctrl-btn" onclick="toggleGridAuto()">Auto</button>
+  </div>
+  <p class="tip">→ Datové vizualizace, heatmapy, interaktivní pozadí</p>
+</div>
+
+<!-- 4. PARTICLES -->
+<div id="panel-particles" class="panel">
+  <p class="hint">Pohybuj prstem — částice reagují</p>
+  <div class="canvas-wrap">
+    <canvas id="c-particles" height="320"></canvas>
+  </div>
+  <div class="ctrl-row">
+    <button class="ctrl-btn active-ctrl" onclick="setParticleMode('attract',this)">Přitahovat</button>
+    <button class="ctrl-btn" onclick="setParticleMode('repel',this)">Odpuzovat</button>
+    <button class="ctrl-btn" onclick="setParticleMode('orbit',this)">Orbita</button>
+  </div>
+  <p class="tip">→ Hero background, interaktivní landing page</p>
+</div>
+
+<!-- 5. TYPOGRAPHY -->
+<div id="panel-type" class="panel">
+  <p class="hint">Text se sestavuje z čar</p>
+  <div class="canvas-wrap">
+    <canvas id="c-type" height="320"></canvas>
+  </div>
+  <div class="ctrl-row">
+    <button class="ctrl-btn active-ctrl" onclick="typeAnimate()">↺ Přehrát</button>
+    <button class="ctrl-btn" onclick="typeWord('HELLO')">HELLO</button>
+    <button class="ctrl-btn" onclick="typeWord('MOTION')">MOTION</button>
+    <button class="ctrl-btn" onclick="typeWord('2026')">2026</button>
+  </div>
+  <p class="tip">→ Animovaný headline, number reveal, logo text</p>
+</div>
+
+<script>
+/* ══════════════════════════════════════
+   UTILS
+══════════════════════════════════════ */
+function lerp(a, b, t) { return a + (b - a) * t; }
+function easeInOut(t) { return t < 0.5 ? 2*t*t : -1+(4-2*t)*t; }
+function easeOut(t)   { return 1 - Math.pow(1-t, 3); }
+
+function setupCanvas(id) {
+  const canvas = document.getElementById(id);
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.parentElement.getBoundingClientRect();
+  canvas.width  = rect.width  * dpr;
+  canvas.height = 320 * dpr;
+  canvas.style.width  = rect.width + "px";
+  canvas.style.height = "320px";
+  const ctx = canvas.getContext("2d");
+  ctx.scale(dpr, dpr);
+  return { canvas, ctx, w: rect.width, h: 320 };
+}
+
+/* ══════════════════════════════════════
+   1. LINES
+══════════════════════════════════════ */
+let linesRAF, linesMode = "flow", linesMouseX = -1, linesMouseY = -1;
+
+function initLines() {
+  cancelAnimationFrame(linesRAF);
+  const { canvas, ctx, w, h } = setupCanvas("c-lines");
+
+  const lines = Array.from({ length: 40 }, (_, i) => ({
+    x: (i / 40) * w, y: h / 2,
+    targetX: (i / 40) * w, targetY: h / 2,
+    vx: 0, vy: (Math.random() - 0.5) * 0.5,
+    phase: Math.random() * Math.PI * 2,
+    len: 20 + Math.random() * 40,
+    alpha: 0.3 + Math.random() * 0.5,
+  }));
+
+  function tick(t) {
+    ctx.fillStyle = "rgba(10,10,10,0.15)";
+    ctx.fillRect(0, 0, w, h);
+
+    lines.forEach((l, i) => {
+      if (linesMode === "flow") {
+        l.x += 0.5;
+        if (l.x > w + 50) l.x = -50;
+        l.y = h/2 + Math.sin(t/1000 + l.phase) * (h/3);
+        // react to mouse
+        if (linesMouseX > 0) {
+          const dx = l.x - linesMouseX;
+          const dy = l.y - linesMouseY;
+          const dist = Math.sqrt(dx*dx + dy*dy);
+          if (dist < 80) {
+            l.y += (dy / dist) * (80 - dist) * 0.15;
+          }
+        }
+      } else if (linesMode === "scatter") {
+        l.x += l.vx;
+        l.y += l.vy;
+        if (l.x < 0 || l.x > w) l.vx *= -1;
+        if (l.y < 0 || l.y > h) l.vy *= -1;
+      } else if (linesMode === "grid") {
+        const cols = 8, rows = 5;
+        const tx = ((i % cols) / cols) * w + w / (cols * 2);
+        const ty = (Math.floor(i / cols) / rows) * h + h / (rows * 2);
+        l.x = lerp(l.x, tx, 0.05);
+        l.y = lerp(l.y, ty, 0.05);
+        l.y += Math.sin(t/600 + l.phase) * 4;
+      }
+
+      const angle = Math.atan2(l.vy || Math.sin(t/800 + l.phase), 1);
+      ctx.save();
+      ctx.translate(l.x, l.y);
+      ctx.rotate(angle);
+      ctx.globalAlpha = l.alpha;
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(-l.len/2, 0);
+      ctx.lineTo(l.len/2, 0);
+      ctx.stroke();
+      // dot at end
+      ctx.beginPath();
+      ctx.arc(l.len/2, 0, 1.5, 0, Math.PI*2);
+      ctx.fillStyle = "#fff";
+      ctx.fill();
+      ctx.restore();
+    });
+
+    linesRAF = requestAnimationFrame(tick);
+  }
+  linesRAF = requestAnimationFrame(tick);
+
+  canvas.addEventListener("mousemove", e => {
+    const r = canvas.getBoundingClientRect();
+    linesMouseX = e.clientX - r.left;
+    linesMouseY = e.clientY - r.top;
+  });
+  canvas.addEventListener("touchmove", e => {
+    const r = canvas.getBoundingClientRect();
+    linesMouseX = e.touches[0].clientX - r.left;
+    linesMouseY = e.touches[0].clientY - r.top;
+    e.preventDefault();
+  }, { passive: false });
+  canvas.addEventListener("mouseleave", () => { linesMouseX = -1; linesMouseY = -1; });
+}
+
+function setLinesMode(mode, btn) {
+  linesMode = mode;
+  document.querySelectorAll("#panel-lines .ctrl-btn").forEach(b => b.classList.remove("active-ctrl"));
+  btn.classList.add("active-ctrl");
+}
+
+/* ══════════════════════════════════════
+   2. MORPH
+══════════════════════════════════════ */
+let morphRAF, morphTarget = 0, morphCurrent = 0, morphProgress = 1;
+
+function getShapePoints(shape, cx, cy, r, n = 64) {
+  const pts = [];
+  for (let i = 0; i < n; i++) {
+    const a = (i / n) * Math.PI * 2 - Math.PI / 2;
+    if (shape === 0) { // circle
+      pts.push({ x: cx + Math.cos(a) * r, y: cy + Math.sin(a) * r });
+    } else if (shape === 1) { // square
+      const t = (i / n) * 4;
+      const side = t % 1;
+      if (t < 1)      pts.push({ x: cx - r + side*2*r, y: cy - r });
+      else if (t < 2) pts.push({ x: cx + r,             y: cy - r + (side)*2*r });
+      else if (t < 3) pts.push({ x: cx + r - side*2*r,  y: cy + r });
+      else            pts.push({ x: cx - r,             y: cy + r - (side)*2*r });
+    } else if (shape === 2) { // triangle
+      const v = Math.floor(t => (i / n) * 3);
+      const verts = [
+        { x: cx, y: cy - r },
+        { x: cx + r * Math.sin(2.09), y: cy + r * Math.cos(2.09) },
+        { x: cx + r * Math.sin(4.19), y: cy + r * Math.cos(4.19) },
+      ];
+      const seg = (i / n) * 3;
+      const vi  = Math.floor(seg) % 3;
+      const vn  = (vi + 1) % 3;
+      const t2  = seg % 1;
+      pts.push({ x: lerp(verts[vi].x, verts[vn].x, t2), y: lerp(verts[vi].y, verts[vn].y, t2) });
+    } else { // star
+      const inner = r * 0.45;
+      const outer = r;
+      const isOuter = (i % 2 === 0);
+      const ra = isOuter ? outer : inner;
+      pts.push({ x: cx + Math.cos(a) * ra, y: cy + Math.sin(a) * ra });
+    }
+  }
+  return pts;
+}
+
+function initMorph() {
+  cancelAnimationFrame(morphRAF);
+  const { canvas, ctx, w, h } = setupCanvas("c-morph");
+  const cx = w/2, cy = h/2, r = Math.min(w,h) * 0.3;
+  const N = 64;
+  let fromPts = getShapePoints(0, cx, cy, r, N);
+  let toPts   = getShapePoints(0, cx, cy, r, N);
+  let prog = 1;
+
+  function tick(t) {
+    ctx.clearRect(0,0,w,h);
+    prog = Math.min(prog + 0.02, 1);
+    const e = easeInOut(prog);
+
+    // interpolate
+    const pts = fromPts.map((p, i) => ({
+      x: lerp(p.x, toPts[i].x, e),
+      y: lerp(p.y, toPts[i].y, e),
+    }));
+
+    // draw filled shape
+    ctx.beginPath();
+    pts.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y));
+    ctx.closePath();
+    ctx.fillStyle = "rgba(255,255,255,0.04)";
+    ctx.fill();
+    ctx.strokeStyle = "rgba(255,255,255,0.9)";
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // draw dots at vertices (every 8th)
+    pts.forEach((p, i) => {
+      if (i % 8 !== 0) return;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 2, 0, Math.PI*2);
+      ctx.fillStyle = "#fff";
+      ctx.fill();
+    });
+
+    // subtle rotation
+    ctx.save();
+    ctx.translate(cx, cy);
+    const angle = t / 8000;
+    ctx.rotate(angle);
+    ctx.translate(-cx, -cy);
+    ctx.restore();
+
+    morphRAF = requestAnimationFrame(tick);
+  }
+
+  window._morphTrigger = (shape) => {
+    fromPts = fromPts.map((p, i) => ({
+      x: lerp(fromPts[i].x, toPts[i].x, easeInOut(prog)),
+      y: lerp(fromPts[i].y, toPts[i].y, easeInOut(prog)),
+    }));
+    toPts = getShapePoints(shape, cx, cy, r, N);
+    prog = 0;
+  };
+
+  morphRAF = requestAnimationFrame(tick);
+}
+
+function setMorphShape(shape, btn) {
+  if (window._morphTrigger) window._morphTrigger(shape);
+  document.querySelectorAll("#panel-morph .ctrl-btn").forEach(b => b.classList.remove("active-ctrl"));
+  btn.classList.add("active-ctrl");
+}
+
+/* ══════════════════════════════════════
+   3. GRID / WAVE
+══════════════════════════════════════ */
+let gridRAF, gridAuto = false, gridWaveOrigin = null;
+
+function initGrid() {
+  cancelAnimationFrame(gridRAF);
+  const { canvas, ctx, w, h } = setupCanvas("c-grid");
+  const cols = 16, rows = 10;
+  const cellW = w / cols, cellH = h / rows;
+
+  const dots = [];
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      dots.push({
+        x: c * cellW + cellW/2,
+        y: r * cellH + cellH/2,
+        scale: 1, targetScale: 1,
+        wave: 0,
+      });
+    }
+  }
+
+  canvas.addEventListener("click", e => {
+    const rect = canvas.getBoundingClientRect();
+    gridWaveOrigin = { x: e.clientX - rect.left, y: e.clientY - rect.top, t: performance.now() };
+  });
+  canvas.addEventListener("touchstart", e => {
+    const rect = canvas.getBoundingClientRect();
+    gridWaveOrigin = { x: e.touches[0].clientX - rect.left, y: e.touches[0].clientY - rect.top, t: performance.now() };
+    e.preventDefault();
+  }, { passive: false });
+
+  function tick(t) {
+    ctx.clearRect(0, 0, w, h);
+
+    // draw grid lines faint
+    ctx.strokeStyle = "rgba(255,255,255,0.04)";
+    ctx.lineWidth = 0.5;
+    for (let c = 0; c <= cols; c++) {
+      ctx.beginPath(); ctx.moveTo(c*cellW, 0); ctx.lineTo(c*cellW, h); ctx.stroke();
+    }
+    for (let r = 0; r <= rows; r++) {
+      ctx.beginPath(); ctx.moveTo(0, r*cellH); ctx.lineTo(w, r*cellH); ctx.stroke();
+    }
+
+    dots.forEach(d => {
+      let s = 1;
+      if (gridWaveOrigin) {
+        const dx = d.x - gridWaveOrigin.x;
+        const dy = d.y - gridWaveOrigin.y;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        const elapsed = (t - gridWaveOrigin.t) / 1000;
+        const waveFront = elapsed * 200;
+        const waveWidth = 80;
+        const diff = waveFront - dist;
+        if (diff > -waveWidth && diff < waveWidth) {
+          const intensity = Math.cos((diff / waveWidth) * Math.PI/2);
+          s = 1 + intensity * 2.5;
+        }
+      }
+      if (gridAuto) {
+        s = 1 + Math.sin(t/600 + d.x/30 + d.y/40) * 0.8;
+      }
+      d.scale = lerp(d.scale, s, 0.12);
+
+      const alpha = 0.2 + (d.scale - 1) * 0.3;
+      ctx.beginPath();
+      ctx.arc(d.x, d.y, Math.max(0.5, d.scale * 2), 0, Math.PI*2);
+      ctx.fillStyle = `rgba(255,255,255,${Math.min(alpha, 0.9)})`;
+      ctx.fill();
+    });
+
+    gridRAF = requestAnimationFrame(tick);
+  }
+  gridRAF = requestAnimationFrame(tick);
+}
+
+function triggerGridWave() {
+  const canvas = document.getElementById("c-grid");
+  const rect = canvas.getBoundingClientRect();
+  gridWaveOrigin = { x: rect.width/2, y: rect.height/2, t: performance.now() };
+}
+function toggleGridAuto() {
+  gridAuto = !gridAuto;
+  document.querySelectorAll("#panel-grid .ctrl-btn")[1].classList.toggle("active-ctrl", gridAuto);
+}
+
+/* ══════════════════════════════════════
+   4. PARTICLES
+══════════════════════════════════════ */
+let particlesRAF, particleMode = "attract";
+let mouseP = { x: -1, y: -1 };
+
+function initParticles() {
+  cancelAnimationFrame(particlesRAF);
+  const { canvas, ctx, w, h } = setupCanvas("c-particles");
+
+  const N = 80;
+  const particles = Array.from({ length: N }, () => ({
+    x: Math.random() * w, y: Math.random() * h,
+    vx: (Math.random()-0.5)*0.8, vy: (Math.random()-0.5)*0.8,
+    size: 1 + Math.random() * 2,
+    alpha: 0.3 + Math.random() * 0.5,
+  }));
+
+  canvas.addEventListener("mousemove", e => {
+    const r = canvas.getBoundingClientRect();
+    mouseP = { x: e.clientX - r.left, y: e.clientY - r.top };
+  });
+  canvas.addEventListener("touchmove", e => {
+    const r = canvas.getBoundingClientRect();
+    mouseP = { x: e.touches[0].clientX - r.left, y: e.touches[0].clientY - r.top };
+    e.preventDefault();
+  }, { passive: false });
+  canvas.addEventListener("mouseleave", () => { mouseP = { x: -1, y: -1 }; });
+
+  function tick() {
+    ctx.fillStyle = "rgba(10,10,10,0.2)";
+    ctx.fillRect(0, 0, w, h);
+
+    particles.forEach(p => {
+      // influence from mouse
+      if (mouseP.x > 0) {
+        const dx = mouseP.x - p.x;
+        const dy = mouseP.y - p.y;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        const maxDist = 120;
+        if (dist < maxDist) {
+          const force = (maxDist - dist) / maxDist;
+          if (particleMode === "attract") {
+            p.vx += (dx/dist) * force * 0.3;
+            p.vy += (dy/dist) * force * 0.3;
+          } else if (particleMode === "repel") {
+            p.vx -= (dx/dist) * force * 0.4;
+            p.vy -= (dy/dist) * force * 0.4;
+          } else if (particleMode === "orbit") {
+            p.vx += (-dy/dist) * force * 0.3;
+            p.vy += (dx/dist)  * force * 0.3;
+          }
+        }
+      }
+
+      // damping
+      p.vx *= 0.96; p.vy *= 0.96;
+      p.x += p.vx;  p.y += p.vy;
+
+      // bounce
+      if (p.x < 0) { p.x = 0; p.vx *= -1; }
+      if (p.x > w) { p.x = w; p.vx *= -1; }
+      if (p.y < 0) { p.y = 0; p.vy *= -1; }
+      if (p.y > h) { p.y = h; p.vy *= -1; }
+
+      // draw
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI*2);
+      ctx.fillStyle = `rgba(255,255,255,${p.alpha})`;
+      ctx.fill();
+    });
+
+    // draw connections
+    ctx.lineWidth = 0.4;
+    for (let i = 0; i < particles.length; i++) {
+      for (let j = i+1; j < particles.length; j++) {
+        const dx = particles[i].x - particles[j].x;
+        const dy = particles[i].y - particles[j].y;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        if (dist < 70) {
+          ctx.globalAlpha = (1 - dist/70) * 0.25;
+          ctx.strokeStyle = "#fff";
+          ctx.beginPath();
+          ctx.moveTo(particles[i].x, particles[i].y);
+          ctx.lineTo(particles[j].x, particles[j].y);
+          ctx.stroke();
+        }
+      }
+    }
+    ctx.globalAlpha = 1;
+
+    particlesRAF = requestAnimationFrame(tick);
+  }
+  particlesRAF = requestAnimationFrame(tick);
+}
+
+function setParticleMode(mode, btn) {
+  particleMode = mode;
+  document.querySelectorAll("#panel-particles .ctrl-btn").forEach(b => b.classList.remove("active-ctrl"));
+  btn.classList.add("active-ctrl");
+}
+
+/* ══════════════════════════════════════
+   5. TYPOGRAPHY
+══════════════════════════════════════ */
+let typeRAF;
+let currentWord = "DESIGN";
+
+function initType() {
+  cancelAnimationFrame(typeRAF);
+  const { canvas, ctx, w, h } = setupCanvas("c-type");
+  typeAnimate();
+}
+
+function typeWord(word) {
+  currentWord = word;
+  typeAnimate();
+}
+
+function typeAnimate() {
+  cancelAnimationFrame(typeRAF);
+  const { canvas, ctx, w, h } = setupCanvas("c-type");
+  const word = currentWord;
+
+  // get letter pixels via offscreen
+  const off = document.createElement("canvas");
+  off.width = w; off.height = h;
+  const octx = off.getContext("2d");
+  octx.fillStyle = "#fff";
+  const fs = Math.min(w * 0.22, 90);
+  octx.font = `900 ${fs}px 'Helvetica Neue', Arial, sans-serif`;
+  octx.textAlign = "center";
+  octx.textBaseline = "middle";
+  octx.fillText(word, w/2, h/2);
+
+  const imageData = octx.getImageData(0, 0, w, h);
+  const pixels = [];
+  const step = 6;
+  for (let y = 0; y < h; y += step) {
+    for (let x = 0; x < w; x += step) {
+      const idx = (y * w + x) * 4;
+      if (imageData.data[idx + 3] > 128) {
+        pixels.push({ tx: x, ty: y, x: Math.random()*w, y: Math.random()*h, alpha: 0 });
+      }
+    }
+  }
+
+  const start = performance.now();
+  const dur = 1200;
+
+  function tick(t) {
+    ctx.clearRect(0, 0, w, h);
+    const p = Math.min((t - start) / dur, 1);
+    const e = easeOut(p);
+
+    pixels.forEach((px, i) => {
+      const delay = (i / pixels.length) * 0.4;
+      const localP = Math.max(0, Math.min((p - delay) / 0.6, 1));
+      const le = easeOut(localP);
+
+      px.x = lerp(px.x, px.tx, 0.04 + le * 0.08);
+      px.y = lerp(px.y, px.ty, 0.04 + le * 0.08);
+      px.alpha = lerp(px.alpha, 1, 0.04 + le * 0.06);
+
+      ctx.globalAlpha = px.alpha;
+      ctx.fillStyle = "#fff";
+      ctx.fillRect(px.x, px.y, step - 1, step - 1);
+    });
+    ctx.globalAlpha = 1;
+
+    // draw scan line
+    if (p < 1) {
+      const scanX = e * w;
+      const grad = ctx.createLinearGradient(scanX - 40, 0, scanX + 2, 0);
+      grad.addColorStop(0, "rgba(255,255,255,0)");
+      grad.addColorStop(1, "rgba(255,255,255,0.15)");
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, scanX, h);
+    }
+
+    if (p < 1) typeRAF = requestAnimationFrame(tick);
+  }
+  typeRAF = requestAnimationFrame(tick);
+}
+
+/* ══════════════════════════════════════
+   TABS + INIT
+══════════════════════════════════════ */
+const panelInits = {
+  lines: initLines, morph: initMorph, grid: initGrid,
+  particles: initParticles, type: initType
+};
+
+function showPanel(name) {
+  cancelAnimationFrame(linesRAF);
+  cancelAnimationFrame(morphRAF);
+  cancelAnimationFrame(gridRAF);
+  cancelAnimationFrame(particlesRAF);
+  cancelAnimationFrame(typeRAF);
+
+  document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+  document.getElementById("panel-" + name).classList.add("active");
+  event.target.classList.add("active");
+
+  setTimeout(() => panelInits[name]?.(), 50);
+}
+
+// init
+setTimeout(() => {
+  initLines();
+}, 200);
+</script>
+</body>
+</html>

@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Motion — 3D & Vesmír</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    min-height: 100vh;
+    background: #000008;
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    color: #f0f0f0;
+    padding: 20px 14px 40px;
+    overflow-x: hidden;
+  }
+  .header {
+    text-align: center; margin-bottom: 24px;
+    animation: fadeIn 0.6s ease both;
+  }
+  .header .label { font-size: 10px; letter-spacing: 6px; color: #333; text-transform: uppercase; margin-bottom: 8px; }
+  .header h1 { font-size: 22px; font-weight: 200; color: #fff; letter-spacing: 4px; text-transform: uppercase; }
+
+  .tabs {
+    display: flex; gap: 0; overflow-x: auto;
+    margin-bottom: 24px; scrollbar-width: none;
+    border-bottom: 1px solid #111122;
+  }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab {
+    flex-shrink: 0; padding: 10px 14px; border: none; cursor: pointer;
+    font-size: 11px; font-weight: 500; letter-spacing: 2px; text-transform: uppercase;
+    background: transparent; color: #333;
+    border-bottom: 2px solid transparent; margin-bottom: -1px;
+    transition: all 0.2s; -webkit-tap-highlight-color: transparent;
+  }
+  .tab.active { color: #fff; border-bottom-color: #7EC8E3; }
+
+  .panel { display: none; max-width: 480px; margin: 0 auto; }
+  .panel.active { display: block; animation: fadeIn 0.3s ease both; }
+  .hint { text-align: center; color: #333; font-size: 11px; letter-spacing: 1px; margin-bottom: 16px; text-transform: uppercase; }
+  .tip  { text-align: center; font-size: 10px; color: #222; margin-top: 14px; letter-spacing: 1px; }
+
+  .canvas-wrap { border-radius: 16px; overflow: hidden; position: relative; }
+  canvas { display: block; width: 100%; }
+
+  .ctrl-row { display: flex; gap: 8px; margin-top: 12px; justify-content: center; flex-wrap: wrap; }
+  .ctrl-btn {
+    padding: 8px 16px; border-radius: 20px;
+    border: 1px solid #1a1a2a; background: transparent;
+    color: #444; font-size: 11px; letter-spacing: 1px;
+    text-transform: uppercase; cursor: pointer;
+    transition: all 0.2s; -webkit-tap-highlight-color: transparent;
+  }
+  .ctrl-btn:active, .ctrl-btn.active-ctrl { border-color: #7EC8E3; color: #7EC8E3; }
+
+  @keyframes fadeIn { from{opacity:0}to{opacity:1} }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="label">Motion · 3D & Vesmír</div>
+  <h1>DEEP SPACE</h1>
+</div>
+
+<div class="tabs">
+  <button class="tab active" onclick="showPanel('warp',this)">Warp</button>
+  <button class="tab" onclick="showPanel('galaxy',this)">Galaxie</button>
+  <button class="tab" onclick="showPanel('planet',this)">Planeta</button>
+  <button class="tab" onclick="showPanel('nebula',this)">Mlhovina</button>
+  <button class="tab" onclick="showPanel('tunnel',this)">Tunel</button>
+</div>
+
+<!-- 1. WARP SPEED -->
+<div id="panel-warp" class="panel active">
+  <p class="hint">Klepni — přejdi do hyperprostoru</p>
+  <div class="canvas-wrap"><canvas id="c-warp" height="320"></canvas></div>
+  <div class="ctrl-row">
+    <button class="ctrl-btn active-ctrl" onclick="setWarpSpeed(1,this)">Pomalu</button>
+    <button class="ctrl-btn" onclick="setWarpSpeed(3,this)">Rychle</button>
+    <button class="ctrl-btn" onclick="setWarpSpeed(8,this)">Hyperprostor</button>
+  </div>
+  <p class="tip">→ Loading screen, hero animace, intro sekvence</p>
+</div>
+
+<!-- 2. GALAXY -->
+<div id="panel-galaxy" class="panel">
+  <p class="hint">Pohybuj prstem — otoč galaxii</p>
+  <div class="canvas-wrap"><canvas id="c-galaxy" height="320"></canvas></div>
+  <div class="ctrl-row">
+    <button class="ctrl-btn active-ctrl" onclick="setGalaxyColor(0,this)">Modrá</button>
+    <button class="ctrl-btn" onclick="setGalaxyColor(1,this)">Zlatá</button>
+    <button class="ctrl-btn" onclick="setGalaxyColor(2,this)">Zelená</button>
+  </div>
+  <p class="tip">→ 3D rotující objekt na hero sekci, vizuál portfolia</p>
+</div>
+
+<!-- 3. PLANET -->
+<div id="panel-planet" class="panel">
+  <p class="hint">Planety obíhají ve 3D prostoru</p>
+  <div class="canvas-wrap"><canvas id="c-planet" height="320"></canvas></div>
+  <div class="ctrl-row">
+    <button class="ctrl-btn active-ctrl" onclick="setPlanetMode(0,this)">Sluneční soustava</button>
+    <button class="ctrl-btn" onclick="setPlanetMode(1,this)">Atomy</button>
+  </div>
+  <p class="tip">→ Vizualizace dat, orbity, síťové grafy</p>
+</div>
+
+<!-- 4. NEBULA -->
+<div id="panel-nebula" class="panel">
+  <p class="hint">Živá mlhovina — klepni pro výbuch</p>
+  <div class="canvas-wrap"><canvas id="c-nebula" height="320"></canvas></div>
+  <div class="ctrl-row">
+    <button class="ctrl-btn active-ctrl" onclick="setNebulaColor(0,this)">Purpur</button>
+    <button class="ctrl-btn" onclick="setNebulaColor(1,this)">Zlatá</button>
+    <button class="ctrl-btn" onclick="setNebulaColor(2,this)">Smaragd</button>
+  </div>
+  <p class="tip">→ Bachovy esence vizuál! Organické, mystické, živé 🌿</p>
+</div>
+
+<!-- 5. TUNNEL -->
+<div id="panel-tunnel" class="panel">
+  <p class="hint">Pohybuj prstem — říď tunel</p>
+  <div class="canvas-wrap"><canvas id="c-tunnel" height="320"></canvas></div>
+  <div class="ctrl-row">
+    <button class="ctrl-btn active-ctrl" onclick="setTunnelMode(0,this)">Hexagon</button>
+    <button class="ctrl-btn" onclick="setTunnelMode(1,this)">Kruh</button>
+    <button class="ctrl-btn" onclick="setTunnelMode(2,this)">Hvězda</button>
+  </div>
+  <p class="tip">→ Intro animace, přechod mezi sekcemi, portal efekt</p>
+</div>
+
+<script>
+function lerp(a,b,t){return a+(b-a)*t}
+function setupCanvas(id){
+  const canvas=document.getElementById(id);
+  const dpr=window.devicePixelRatio||1;
+  const rect=canvas.parentElement.getBoundingClientRect();
+  canvas.width=rect.width*dpr;
+  canvas.height=320*dpr;
+  canvas.style.width=rect.width+"px";
+  canvas.style.height="320px";
+  const ctx=canvas.getContext("2d");
+  ctx.scale(dpr,dpr);
+  return{canvas,ctx,w:rect.width,h:320};
+}
+
+/* ══ 1. WARP ══ */
+let warpRAF, warpSpeed=1;
+function initWarp(){
+  cancelAnimationFrame(warpRAF);
+  const{canvas,ctx,w,h}=setupCanvas("c-warp");
+  const cx=w/2, cy=h/2;
+  const N=300;
+  const stars=Array.from({length:N},()=>({
+    x:(Math.random()-0.5)*w*3,
+    y:(Math.random()-0.5)*h*3,
+    z:Math.random()*w,
+    pz:0,
+  }));
+
+  let clicking=false;
+  canvas.addEventListener("mousedown",()=>clicking=true);
+  canvas.addEventListener("mouseup",()=>clicking=false);
+  canvas.addEventListener("touchstart",()=>clicking=true,{passive:true});
+  canvas.addEventListener("touchend",()=>clicking=false);
+
+  function tick(){
+    ctx.fillStyle="rgba(0,0,8,0.25)";
+    ctx.fillRect(0,0,w,h);
+    const speed=(clicking?warpSpeed*3:warpSpeed)*4;
+
+    stars.forEach(s=>{
+      s.pz=s.z;
+      s.z-=speed;
+      if(s.z<=0){s.x=(Math.random()-0.5)*w*3;s.y=(Math.random()-0.5)*h*3;s.z=w;s.pz=w;}
+
+      const sx=cx+(s.x/s.z)*w*0.5;
+      const sy=cy+(s.y/s.z)*h*0.5;
+      const px=cx+(s.x/s.pz)*w*0.5;
+      const py=cy+(s.y/s.pz)*h*0.5;
+      const size=Math.max(0.3,(1-s.z/w)*3);
+      const bright=1-s.z/w;
+
+      ctx.strokeStyle=`rgba(${Math.floor(180+bright*75)},${Math.floor(200+bright*55)},255,${bright*0.9})`;
+      ctx.lineWidth=size;
+      ctx.beginPath();
+      ctx.moveTo(px,py);
+      ctx.lineTo(sx,sy);
+      ctx.stroke();
+    });
+
+    // center glow
+    const g=ctx.createRadialGradient(cx,cy,0,cx,cy,80);
+    g.addColorStop(0,"rgba(126,200,227,0.08)");
+    g.addColorStop(1,"transparent");
+    ctx.fillStyle=g;
+    ctx.fillRect(0,0,w,h);
+
+    warpRAF=requestAnimationFrame(tick);
+  }
+  warpRAF=requestAnimationFrame(tick);
+}
+function setWarpSpeed(s,btn){
+  warpSpeed=s;
+  document.querySelectorAll("#panel-warp .ctrl-btn").forEach(b=>b.classList.remove("active-ctrl"));
+  btn.classList.add("active-ctrl");
+}
+
+/* ══ 2. GALAXY ══ */
+let galaxyRAF, galaxyColor=0;
+const galaxyPalettes=[
+  {a:"#7EC8E3",b:"#a78bfa",c:"#ffffff"},
+  {a:"#fbbf24",b:"#f97316",c:"#fef3c7"},
+  {a:"#34d399",b:"#10b981",c:"#d1fae5"},
+];
+function initGalaxy(){
+  cancelAnimationFrame(galaxyRAF);
+  const{canvas,ctx,w,h}=setupCanvas("c-galaxy");
+  const cx=w/2,cy=h/2;
+  const N=800;
+  const arms=3;
+  const pts=Array.from({length:N},(_,i)=>{
+    const arm=i%arms;
+    const t=(i/N)*Math.PI*8;
+    const r=20+t*12+(Math.random()-0.5)*30;
+    const baseAngle=t+(arm/arms)*Math.PI*2;
+    return{
+      baseX:Math.cos(baseAngle)*r,
+      baseY:Math.sin(baseAngle)*r*0.4,
+      z:(Math.random()-0.5)*80,
+      size:0.5+Math.random()*1.5,
+      alpha:0.3+Math.random()*0.7,
+      arm,
+    };
+  });
+
+  let rotY=0, rotX=0.3;
+  let dragX=0, isDragging=false, lastMX=0;
+
+  canvas.addEventListener("mousedown",e=>{isDragging=true;lastMX=e.clientX;});
+  canvas.addEventListener("mousemove",e=>{if(!isDragging)return;dragX=(e.clientX-lastMX)*0.01;lastMX=e.clientX;});
+  canvas.addEventListener("mouseup",()=>isDragging=false);
+  canvas.addEventListener("touchstart",e=>{isDragging=true;lastMX=e.touches[0].clientX;},{passive:true});
+  canvas.addEventListener("touchmove",e=>{if(!isDragging)return;dragX=(e.touches[0].clientX-lastMX)*0.01;lastMX=e.touches[0].clientX;},{passive:true});
+  canvas.addEventListener("touchend",()=>isDragging=false);
+
+  function tick(){
+    ctx.fillStyle="rgba(0,0,8,0.3)";
+    ctx.fillRect(0,0,w,h);
+    const pal=galaxyPalettes[galaxyColor];
+    rotY+=isDragging?dragX:0.004;
+    dragX*=0.92;
+
+    const projected=pts.map(p=>{
+      // rotate around Y
+      const cosY=Math.cos(rotY), sinY=Math.sin(rotY);
+      const x3=p.baseX*cosY-p.z*sinY;
+      const z3=p.baseX*sinY+p.z*cosY;
+      // rotate around X
+      const cosX=Math.cos(rotX), sinX=Math.sin(rotX);
+      const y3=p.baseY*cosX-z3*sinX;
+      const z4=p.baseY*sinX+z3*cosX;
+      const scale=300/(300+z4);
+      return{x:cx+x3*scale, y:cy+y3*scale, scale, arm:p.arm, size:p.size, alpha:p.alpha};
+    }).sort((a,b)=>b.scale-a.scale);
+
+    projected.forEach(p=>{
+      const c=p.arm===0?pal.a:p.arm===1?pal.b:pal.c;
+      ctx.beginPath();
+      ctx.arc(p.x,p.y,p.size*p.scale,0,Math.PI*2);
+      ctx.fillStyle=c;
+      ctx.globalAlpha=p.alpha*p.scale*0.8;
+      ctx.fill();
+    });
+    ctx.globalAlpha=1;
+
+    // core glow
+    const g=ctx.createRadialGradient(cx,cy,0,cx,cy,40);
+    g.addColorStop(0,"rgba(255,255,255,0.3)");
+    g.addColorStop(0.3,pal.a+"44");
+    g.addColorStop(1,"transparent");
+    ctx.fillStyle=g;
+    ctx.fillRect(0,0,w,h);
+
+    galaxyRAF=requestAnimationFrame(tick);
+  }
+  galaxyRAF=requestAnimationFrame(tick);
+}
+function setGalaxyColor(i,btn){
+  galaxyColor=i;
+  document.querySelectorAll("#panel-galaxy .ctrl-btn").forEach(b=>b.classList.remove("active-ctrl"));
+  btn.classList.add("active-ctrl");
+}
+
+/* ══ 3. PLANETS ══ */
+let planetRAF, planetMode=0;
+function initPlanet(){
+  cancelAnimationFrame(planetRAF);
+  const{canvas,ctx,w,h}=setupCanvas("c-planet");
+  const cx=w/2,cy=h/2;
+
+  const configs=[
+    // solar system
+    {center:{r:22,color:"#FFD700",glow:"#ff8800"},
+     orbits:[
+       {r:8,orbitR:50,speed:0.025,color:"#aaa",tilt:0.2},
+       {r:12,orbitR:85,speed:0.015,color:"#7EC8E3",tilt:0.3,ring:true},
+       {r:10,orbitR:125,speed:0.01,color:"#f97316",tilt:0.15},
+       {r:6,orbitR:160,speed:0.007,color:"#a78bfa",tilt:0.4},
+     ]},
+    // atom
+    {center:{r:14,color:"#7EC8E3",glow:"#7EC8E3"},
+     orbits:[
+       {r:5,orbitR:55,speed:0.04,color:"#f87171",tilt:0},
+       {r:5,orbitR:55,speed:0.04,color:"#f87171",tilt:1.05},
+       {r:5,orbitR:55,speed:0.04,color:"#f87171",tilt:2.09},
+     ]},
+  ];
+
+  let angles=configs.map(c=>c.orbits.map(()=>Math.random()*Math.PI*2));
+
+  function tick(t){
+    ctx.fillStyle="rgba(0,0,8,0.3)";
+    ctx.fillRect(0,0,w,h);
+    const cfg=configs[planetMode];
+
+    // orbit paths
+    cfg.orbits.forEach((orb,i)=>{
+      ctx.beginPath();
+      ctx.ellipse(cx,cy,orb.orbitR,orb.orbitR*Math.abs(Math.cos(orb.tilt)),0,0,Math.PI*2);
+      ctx.strokeStyle="rgba(255,255,255,0.06)";
+      ctx.lineWidth=1;
+      ctx.stroke();
+    });
+
+    // center star/nucleus
+    const sg=ctx.createRadialGradient(cx,cy,0,cx,cy,cfg.center.r*2);
+    sg.addColorStop(0,"#ffffff");
+    sg.addColorStop(0.3,cfg.center.color);
+    sg.addColorStop(1,cfg.center.glow+"00");
+    ctx.fillStyle=sg;
+    ctx.beginPath();
+    ctx.arc(cx,cy,cfg.center.r*2,0,Math.PI*2);
+    ctx.fill();
+
+    // planets/electrons
+    cfg.orbits.forEach((orb,i)=>{
+      angles[planetMode][i]+=orb.speed;
+      const a=angles[planetMode][i];
+      const px=cx+Math.cos(a)*orb.orbitR;
+      const py=cy+Math.sin(a)*orb.orbitR*Math.abs(Math.cos(orb.tilt));
+
+      // shadow on orbit
+      if(Math.sin(a)*Math.cos(orb.tilt)<0){
+        // behind center — draw shadow
+        ctx.globalAlpha=0.3;
+      }
+
+      // ring (Saturn style)
+      if(orb.ring){
+        ctx.save();
+        ctx.translate(px,py);
+        ctx.scale(1,0.35);
+        ctx.beginPath();
+        ctx.arc(0,0,orb.r*2.2,0,Math.PI*2);
+        ctx.strokeStyle=orb.color+"66";
+        ctx.lineWidth=3;
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      const pg=ctx.createRadialGradient(px-orb.r*0.3,py-orb.r*0.3,0,px,py,orb.r);
+      pg.addColorStop(0,"#ffffff99");
+      pg.addColorStop(0.4,orb.color);
+      pg.addColorStop(1,orb.color+"44");
+      ctx.fillStyle=pg;
+      ctx.beginPath();
+      ctx.arc(px,py,orb.r,0,Math.PI*2);
+      ctx.fill();
+      ctx.globalAlpha=1;
+
+      // trail
+      for(let j=1;j<=8;j++){
+        const ta=a-j*orb.speed*3;
+        const tx=cx+Math.cos(ta)*orb.orbitR;
+        const ty=cy+Math.sin(ta)*orb.orbitR*Math.abs(Math.cos(orb.tilt));
+        ctx.beginPath();
+        ctx.arc(tx,ty,orb.r*(1-j/10),0,Math.PI*2);
+        ctx.fillStyle=orb.color;
+        ctx.globalAlpha=(1-j/10)*0.15;
+        ctx.fill();
+      }
+      ctx.globalAlpha=1;
+    });
+
+    planetRAF=requestAnimationFrame(tick);
+  }
+  planetRAF=requestAnimationFrame(tick);
+}
+function setPlanetMode(m,btn){
+  planetMode=m;
+  document.querySelectorAll("#panel-planet .ctrl-btn").forEach(b=>b.classList.remove("active-ctrl"));
+  btn.classList.add("active-ctrl");
+}
+
+/* ══ 4. NEBULA ══ */
+let nebulaRAF, nebulaColor=0;
+const nebulaPalettes=[
+  ["#4f46e5","#7c3aed","#a78bfa","#ec4899"],
+  ["#b45309","#d97706","#fbbf24","#f97316"],
+  ["#065f46","#059669","#34d399","#10b981"],
+];
+function initNebula(){
+  cancelAnimationFrame(nebulaRAF);
+  const{canvas,ctx,w,h}=setupCanvas("c-nebula");
+  const cx=w/2,cy=h/2;
+
+  const layers=Array.from({length:6},(_,i)=>({
+    x:cx+(Math.random()-0.5)*w*0.4,
+    y:cy+(Math.random()-0.5)*h*0.4,
+    r:40+Math.random()*80,
+    phase:Math.random()*Math.PI*2,
+    speed:0.0003+Math.random()*0.0004,
+    colorIdx:i%4,
+  }));
+
+  const particles=Array.from({length:120},()=>({
+    x:cx+(Math.random()-0.5)*w*0.8,
+    y:cy+(Math.random()-0.5)*h*0.8,
+    vx:(Math.random()-0.5)*0.2,
+    vy:(Math.random()-0.5)*0.2,
+    r:0.5+Math.random()*1.5,
+    alpha:Math.random()*0.8,
+    twinkle:Math.random()*Math.PI*2,
+  }));
+
+  let explosion=null;
+  canvas.addEventListener("click",e=>{
+    const r=canvas.getBoundingClientRect();
+    explosion={x:e.clientX-r.left,y:e.clientY-r.top,t:performance.now()};
+  });
+  canvas.addEventListener("touchstart",e=>{
+    const r=canvas.getBoundingClientRect();
+    explosion={x:e.touches[0].clientX-r.left,y:e.touches[0].clientY-r.top,t:performance.now()};
+    e.preventDefault();
+  },{passive:false});
+
+  function tick(t){
+    ctx.fillStyle="rgba(0,0,8,0.12)";
+    ctx.fillRect(0,0,w,h);
+    const pal=nebulaPalettes[nebulaColor];
+
+    // nebula clouds
+    ctx.globalCompositeOperation="screen";
+    layers.forEach(l=>{
+      const ox=Math.cos(t*l.speed+l.phase)*20;
+      const oy=Math.sin(t*l.speed*1.3+l.phase)*15;
+      const g=ctx.createRadialGradient(l.x+ox,l.y+oy,0,l.x+ox,l.y+oy,l.r);
+      g.addColorStop(0,pal[l.colorIdx]+"66");
+      g.addColorStop(0.5,pal[l.colorIdx]+"22");
+      g.addColorStop(1,"transparent");
+      ctx.fillStyle=g;
+      ctx.beginPath();
+      ctx.arc(l.x+ox,l.y+oy,l.r,0,Math.PI*2);
+      ctx.fill();
+    });
+    ctx.globalCompositeOperation="source-over";
+
+    // particles (stars)
+    particles.forEach(p=>{
+      p.x+=p.vx; p.y+=p.vy;
+      p.twinkle+=0.05;
+      if(p.x<0||p.x>w) p.vx*=-1;
+      if(p.y<0||p.y>h) p.vy*=-1;
+      const a=p.alpha*(0.5+Math.sin(p.twinkle)*0.5);
+      ctx.beginPath();
+      ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+      ctx.fillStyle=`rgba(255,255,255,${a})`;
+      ctx.fill();
+    });
+
+    // explosion
+    if(explosion){
+      const age=(t-explosion.t)/1000;
+      if(age<1.5){
+        const maxR=Math.min(w,h)*0.5;
+        const r=age*maxR;
+        const a=1-age/1.5;
+        ctx.globalCompositeOperation="screen";
+        const g=ctx.createRadialGradient(explosion.x,explosion.y,0,explosion.x,explosion.y,r);
+        g.addColorStop(0,`rgba(255,255,255,${a*0.6})`);
+        g.addColorStop(0.3,pal[0]+Math.floor(a*180).toString(16).padStart(2,"0"));
+        g.addColorStop(1,"transparent");
+        ctx.fillStyle=g;
+        ctx.beginPath();
+        ctx.arc(explosion.x,explosion.y,r,0,Math.PI*2);
+        ctx.fill();
+        ctx.globalCompositeOperation="source-over";
+      } else explosion=null;
+    }
+
+    nebulaRAF=requestAnimationFrame(tick);
+  }
+  nebulaRAF=requestAnimationFrame(tick);
+}
+function setNebulaColor(i,btn){
+  nebulaColor=i;
+  document.querySelectorAll("#panel-nebula .ctrl-btn").forEach(b=>b.classList.remove("active-ctrl"));
+  btn.classList.add("active-ctrl");
+}
+
+/* ══ 5. TUNNEL ══ */
+let tunnelRAF, tunnelMode=0;
+function initTunnel(){
+  cancelAnimationFrame(tunnelRAF);
+  const{canvas,ctx,w,h}=setupCanvas("c-tunnel");
+  const cx=w/2,cy=h/2;
+  let mouseX=cx,mouseY=cy;
+
+  canvas.addEventListener("mousemove",e=>{const r=canvas.getBoundingClientRect();mouseX=e.clientX-r.left;mouseY=e.clientY-r.top;});
+  canvas.addEventListener("touchmove",e=>{const r=canvas.getBoundingClientRect();mouseX=e.touches[0].clientX-r.left;mouseY=e.touches[0].clientY-r.top;e.preventDefault();},{passive:false});
+
+  const shapes=[
+    (a,r)=>({x:Math.cos(a)*r, y:Math.sin(a)*r}), // circle
+    (a,r)=>{ // hexagon
+      const sides=6, seg=Math.floor(a/(Math.PI*2/sides));
+      const t=(a%(Math.PI*2/sides))/(Math.PI*2/sides);
+      const a1=seg*(Math.PI*2/sides), a2=(seg+1)*(Math.PI*2/sides);
+      return{x:lerp(Math.cos(a1)*r,Math.cos(a2)*r,t), y:lerp(Math.sin(a1)*r,Math.sin(a2)*r,t)};
+    },
+    (a,r)=>{ // star
+      const spikes=5, inner=r*0.45;
+      const outer=r;
+      const seg=Math.floor(a/(Math.PI/spikes));
+      const t=(a%(Math.PI/spikes))/(Math.PI/spikes);
+      const isOuter=seg%2===0;
+      const r1=isOuter?outer:inner, r2=isOuter?inner:outer;
+      const a1=seg*(Math.PI/spikes), a2=(seg+1)*(Math.PI/spikes);
+      return{x:lerp(Math.cos(a1)*r1,Math.cos(a2)*r2,t), y:lerp(Math.sin(a1)*r1,Math.sin(a2)*r2,t)};
+    },
+  ];
+
+  function tick(t){
+    ctx.fillStyle="rgba(0,0,8,0.25)";
+    ctx.fillRect(0,0,w,h);
+
+    const tx=lerp(cx,mouseX,0.05);
+    const ty=lerp(cy,mouseY,0.05);
+    const N=20;
+    const shapeFn=shapes[tunnelMode];
+
+    for(let i=N;i>=1;i--){
+      const progress=i/N;
+      const baseR=progress*Math.min(w,h)*0.45;
+      const offset=(t/1000*0.5)%1;
+      const r=baseR*(1+offset*0.05);
+      const hue=200+progress*120+(t/30);
+      const alpha=0.15+progress*0.1;
+      const pts=32;
+
+      ctx.beginPath();
+      for(let j=0;j<=pts;j++){
+        const a=(j/pts)*Math.PI*2+(t/2000)*(i%2===0?1:-1);
+        const p=shapeFn(a,r);
+        // perspective warp toward mouse
+        const px=lerp(tx,cx+p.x,progress);
+        const py=lerp(ty,cy+p.y,progress);
+        j===0?ctx.moveTo(px,py):ctx.lineTo(px,py);
+      }
+      ctx.closePath();
+      ctx.strokeStyle=`hsla(${hue%360},70%,65%,${alpha})`;
+      ctx.lineWidth=1;
+      ctx.stroke();
+
+      // fill inner
+      if(i<3){
+        ctx.fillStyle=`hsla(${hue%360},70%,65%,0.03)`;
+        ctx.fill();
+      }
+    }
+
+    // center glow
+    const g=ctx.createRadialGradient(cx,cy,0,cx,cy,30);
+    g.addColorStop(0,"rgba(255,255,255,0.2)");
+    g.addColorStop(1,"transparent");
+    ctx.fillStyle=g;
+    ctx.fillRect(0,0,w,h);
+
+    tunnelRAF=requestAnimationFrame(tick);
+  }
+  tunnelRAF=requestAnimationFrame(tick);
+}
+function setTunnelMode(m,btn){
+  tunnelMode=m;
+  document.querySelectorAll("#panel-tunnel .ctrl-btn").forEach(b=>b.classList.remove("active-ctrl"));
+  btn.classList.add("active-ctrl");
+}
+
+/* ══ TABS ══ */
+const inits={warp:initWarp,galaxy:initGalaxy,planet:initPlanet,nebula:initNebula,tunnel:initTunnel};
+function showPanel(name,btn){
+  cancelAnimationFrame(warpRAF);cancelAnimationFrame(galaxyRAF);
+  cancelAnimationFrame(planetRAF);cancelAnimationFrame(nebulaRAF);cancelAnimationFrame(tunnelRAF);
+  document.querySelectorAll(".panel").forEach(p=>p.classList.remove("active"));
+  document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
+  document.getElementById("panel-"+name).classList.add("active");
+  if(btn) btn.classList.add("active");
+  setTimeout(()=>inits[name]?.(),50);
+}
+setTimeout(initWarp,200);
+</script>
+</body>
+</html>

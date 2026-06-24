@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Motion — Oslavy & Konfety</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #0a0f1e 0%, #0d1b35 100%);
+    font-family: -apple-system, system-ui, sans-serif;
+    color: #f0f4ff;
+    padding: 20px 14px 40px;
+    overflow-x: hidden;
+  }
+
+  .header {
+    text-align: center; margin-bottom: 24px;
+    animation: fadeIn 0.6s ease both;
+  }
+  .header .label { font-size: 10px; letter-spacing: 6px; color: #7EC8E3; text-transform: uppercase; margin-bottom: 8px; }
+  .header h1 {
+    font-size: 22px; font-weight: 800;
+    background: linear-gradient(90deg, #7EC8E3, #fff, #fbbf24);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+
+  .tabs {
+    display: flex; gap: 8px; overflow-x: auto;
+    padding-bottom: 4px; margin-bottom: 24px; scrollbar-width: none;
+  }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab {
+    flex-shrink: 0; padding: 8px 15px; border-radius: 20px;
+    border: none; cursor: pointer; font-size: 12px; font-weight: 600;
+    background: rgba(255,255,255,0.08); color: #8892b0;
+    transition: all 0.22s; -webkit-tap-highlight-color: transparent;
+  }
+  .tab.active { background: linear-gradient(90deg, #fbbf24, #f97316); color: #0a0f1e; }
+
+  .panel { display: none; max-width: 480px; margin: 0 auto; }
+  .panel.active { display: block; animation: fadeIn 0.3s ease both; }
+  .hint { text-align: center; color: #8892b0; font-size: 13px; margin-bottom: 18px; }
+  .tip  { text-align: center; font-size: 11px; color: #4a5568; margin-top: 16px; }
+
+  /* ══ CANVAS ══ */
+  #confetti-canvas {
+    position: fixed; inset: 0; pointer-events: none; z-index: 9999;
+    width: 100%; height: 100%;
+  }
+
+  /* ══ TRIGGER BUTTONS ══ */
+  .trigger-grid { display: flex; flex-direction: column; gap: 12px; }
+  .trig-btn {
+    padding: 18px 20px; border-radius: 16px; border: none;
+    cursor: pointer; font-size: 15px; font-weight: 700;
+    display: flex; align-items: center; gap: 14px;
+    transition: transform 0.15s; -webkit-tap-highlight-color: transparent;
+    position: relative; overflow: hidden;
+  }
+  .trig-btn:active { transform: scale(0.96); }
+  .trig-btn .tb-icon { font-size: 28px; flex-shrink: 0; }
+  .trig-btn .tb-text { flex: 1; text-align: left; }
+  .trig-btn .tb-title { font-size: 15px; font-weight: 700; }
+  .trig-btn .tb-sub   { font-size: 12px; opacity: 0.7; margin-top: 2px; font-weight: 400; }
+
+  .trig-btn.gold { background: linear-gradient(135deg, #92400e, #b45309); color: #fef3c7; }
+  .trig-btn.green { background: linear-gradient(135deg, #064e3b, #065f46); color: #d1fae5; }
+  .trig-btn.blue  { background: linear-gradient(135deg, #1e3a5f, #1e40af); color: #dbeafe; }
+  .trig-btn.pink  { background: linear-gradient(135deg, #831843, #9d174d); color: #fce7f3; }
+  .trig-btn.rainbow { background: linear-gradient(135deg, #7c3aed, #2563eb, #059669); color: #fff; }
+
+  /* ══ SUCCESS CARD ══ */
+  .success-card {
+    background: rgba(52,211,153,0.08);
+    border: 1px solid rgba(52,211,153,0.2);
+    border-radius: 24px; padding: 32px 24px;
+    text-align: center;
+    transform: scale(0.9); opacity: 0;
+    transition: transform 0.5s cubic-bezier(0.34,1.56,0.64,1), opacity 0.3s ease;
+    margin-bottom: 16px;
+  }
+  .success-card.show { transform: scale(1); opacity: 1; }
+  .success-icon {
+    font-size: 60px; margin-bottom: 12px;
+    display: block;
+    animation: bounceIn 0s both;
+  }
+  .success-icon.animate { animation: bounceIn 0.6s cubic-bezier(0.34,1.56,0.64,1) both; }
+  .success-title { font-size: 22px; font-weight: 800; color: #34d399; margin-bottom: 8px; }
+  .success-sub   { font-size: 14px; color: #8892b0; line-height: 1.6; }
+  .success-badge {
+    display: inline-block; margin-top: 14px;
+    padding: 8px 20px; border-radius: 50px;
+    background: rgba(52,211,153,0.15);
+    border: 1px solid rgba(52,211,153,0.3);
+    font-size: 13px; font-weight: 700; color: #34d399;
+  }
+
+  /* ══ MILESTONE ══ */
+  .milestone-wrap { display: flex; flex-direction: column; gap: 12px; }
+  .milestone-item {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 16px; padding: 16px 18px;
+    display: flex; align-items: center; gap: 14px;
+    cursor: pointer; transition: transform 0.15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .milestone-item:active { transform: scale(0.97); }
+  .ms-icon { font-size: 28px; flex-shrink: 0; }
+  .ms-body { flex: 1; }
+  .ms-title { font-size: 14px; font-weight: 700; }
+  .ms-sub   { font-size: 12px; color: #8892b0; margin-top: 2px; }
+  .ms-check {
+    width: 28px; height: 28px; border-radius: 50%;
+    border: 2px solid rgba(255,255,255,0.15);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; flex-shrink: 0;
+    transition: all 0.4s cubic-bezier(0.34,1.56,0.64,1);
+  }
+  .milestone-item.done .ms-check {
+    background: #34d399; border-color: #34d399;
+    transform: scale(1.2);
+  }
+  .milestone-item.done .ms-title { color: #34d399; }
+
+  /* ══ ACHIEVEMENT ══ */
+  .achievement-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+  }
+  .ach-card {
+    background: rgba(255,255,255,0.04);
+    border: 2px solid rgba(255,255,255,0.06);
+    border-radius: 18px; padding: 18px 14px;
+    text-align: center; cursor: pointer;
+    transition: transform 0.2s, border-color 0.3s, background 0.3s;
+    -webkit-tap-highlight-color: transparent;
+    position: relative; overflow: hidden;
+  }
+  .ach-card:active { transform: scale(0.95); }
+  .ach-card.unlocked {
+    border-color: rgba(251,191,36,0.4);
+    background: rgba(251,191,36,0.08);
+  }
+  .ach-icon { font-size: 36px; margin-bottom: 8px; filter: grayscale(1); transition: filter 0.4s; }
+  .ach-card.unlocked .ach-icon { filter: none; }
+  .ach-title { font-size: 12px; font-weight: 700; color: #4a5568; transition: color 0.3s; }
+  .ach-card.unlocked .ach-title { color: #fbbf24; }
+  .ach-sub { font-size: 10px; color: #2a3040; margin-top: 3px; }
+  .ach-lock { font-size: 18px; position: absolute; top: 8px; right: 10px; opacity: 0.3; }
+  .ach-card.unlocked .ach-lock { opacity: 0; }
+  .ach-shine {
+    position: absolute; inset: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, transparent 60%);
+    opacity: 0; transition: opacity 0.3s;
+    border-radius: inherit;
+  }
+  .ach-card.unlocked .ach-shine { opacity: 1; }
+
+  /* ══ FIREWORKS ══ */
+  .fireworks-stage {
+    background: #000008; border-radius: 16px;
+    position: relative; overflow: hidden; height: 240px;
+    cursor: pointer;
+  }
+  #fw-canvas { display: block; width: 100%; height: 100%; }
+  .fw-hint { position: absolute; bottom: 12px; left: 0; right: 0; text-align: center; font-size: 11px; color: #333; letter-spacing: 1px; text-transform: uppercase; }
+
+  @keyframes fadeIn { from{opacity:0}to{opacity:1} }
+  @keyframes bounceIn {
+    0%   { transform: scale(0) rotate(-10deg); opacity: 0; }
+    60%  { transform: scale(1.2) rotate(5deg); opacity: 1; }
+    80%  { transform: scale(0.9) rotate(-2deg); }
+    100% { transform: scale(1) rotate(0deg); opacity: 1; }
+  }
+  @keyframes pulse {
+    0%,100% { transform: scale(1); }
+    50%      { transform: scale(1.05); }
+  }
+</style>
+</head>
+<body>
+
+<canvas id="confetti-canvas"></canvas>
+
+<div class="header">
+  <div class="label">Motion · Oslavy</div>
+  <h1>🎉 CELEBRATION</h1>
+</div>
+
+<div class="tabs">
+  <button class="tab active" onclick="showPanel('confetti',this)">🎊 Konfety</button>
+  <button class="tab" onclick="showPanel('success',this)">✅ Success</button>
+  <button class="tab" onclick="showPanel('milestone',this)">🏆 Milníky</button>
+  <button class="tab" onclick="showPanel('achievement',this)">🎖 Odznaky</button>
+  <button class="tab" onclick="showPanel('fireworks',this)">🎆 Ohňostroj</button>
+</div>
+
+<!-- 1. KONFETY -->
+<div id="panel-confetti" class="panel active">
+  <p class="hint">👆 Klepni na tlačítko — spustí se různé konfety</p>
+  <div class="trigger-grid">
+    <button class="trig-btn gold" onclick="fireConfetti('gold')">
+      <span class="tb-icon">🏆</span>
+      <span class="tb-text">
+        <div class="tb-title">Platba proběhla!</div>
+        <div class="tb-sub">Zlaté konfety — prodej appky</div>
+      </span>
+    </button>
+    <button class="trig-btn green" onclick="fireConfetti('green')">
+      <span class="tb-icon">✅</span>
+      <span class="tb-text">
+        <div class="tb-title">Aktivace úspěšná!</div>
+        <div class="tb-sub">Zelené konfety — licenční klíč</div>
+      </span>
+    </button>
+    <button class="trig-btn blue" onclick="fireConfetti('blue')">
+      <span class="tb-icon">🌙</span>
+      <span class="tb-text">
+        <div class="tb-title">Nejlepší noc!</div>
+        <div class="tb-sub">Modré konfety — spánkový rekord</div>
+      </span>
+    </button>
+    <button class="trig-btn pink" onclick="fireConfetti('pink')">
+      <span class="tb-icon">🍼</span>
+      <span class="tb-text">
+        <div class="tb-title">Milník splněn!</div>
+        <div class="tb-sub">Růžové konfety — první krmení</div>
+      </span>
+    </button>
+    <button class="trig-btn rainbow" onclick="fireConfetti('rainbow')">
+      <span class="tb-icon">🌈</span>
+      <span class="tb-text">
+        <div class="tb-title">VELKÁ OSLAVA!</div>
+        <div class="tb-sub">Duhové konfety — maximální exploze</div>
+      </span>
+    </button>
+  </div>
+  <p class="tip">→ Po platbě, aktivaci klíče, splnění milníku, rekordu spánku</p>
+</div>
+
+<!-- 2. SUCCESS STATE -->
+<div id="panel-success" class="panel">
+  <p class="hint">👆 Klepni na tlačítko níže</p>
+  <div class="success-card" id="success-card">
+    <span class="success-icon" id="success-icon">🎉</span>
+    <div class="success-title" id="success-title">Platba proběhla!</div>
+    <div class="success-sub" id="success-sub">Tvůj přístup k RaisingSmall Premium byl aktivován. Vítej v komunitě!</div>
+    <div class="success-badge" id="success-badge">✓ Premium aktivní</div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:10px">
+    <button class="trig-btn gold" onclick="showSuccess('🏆','Platba proběhla!','Tvůj přístup k RaisingSmall Premium byl aktivován.','✓ Premium aktivní','gold')">
+      <span class="tb-icon">💳</span><span class="tb-text"><div class="tb-title">Platba</div><div class="tb-sub">Success state po koupi</div></span>
+    </button>
+    <button class="trig-btn green" onclick="showSuccess('🔑','Klíč aktivován!','Licenční klíč byl úspěšně ověřen. Vše je připraveno.','✓ Přístup odemčen','green')">
+      <span class="tb-icon">🔑</span><span class="tb-text"><div class="tb-title">Aktivace klíče</div><div class="tb-sub">Success state po zadání kódu</div></span>
+    </button>
+    <button class="trig-btn blue" onclick="showSuccess('🌙','Rekord spánku!','Dnešní noc byla nejlepší za poslední měsíc. 9h 12min!','🏆 Nový rekord','blue')">
+      <span class="tb-icon">🌙</span><span class="tb-text"><div class="tb-title">Spánkový rekord</div><div class="tb-sub">Success state v trackeru</div></span>
+    </button>
+  </div>
+  <p class="tip">→ Po každé důležité akci uživatele — oslav to!</p>
+</div>
+
+<!-- 3. MILESTONE -->
+<div id="panel-milestone" class="panel">
+  <p class="hint">👆 Klepni na milník pro splnění</p>
+  <div class="milestone-wrap" id="milestone-list"></div>
+  <p class="tip">→ Onboarding checklist, dětské milníky, prodejní cíle</p>
+</div>
+
+<!-- 4. ACHIEVEMENTS -->
+<div id="panel-achievement" class="panel">
+  <p class="hint">👆 Klepni na odznak pro odemčení</p>
+  <div class="achievement-grid" id="ach-grid"></div>
+  <p class="tip">→ Gamifikace appky — uživatelé se vracejí pro odznaky!</p>
+</div>
+
+<!-- 5. FIREWORKS -->
+<div id="panel-fireworks" class="panel">
+  <p class="hint">👆 Klepni na plochu pro výbuch</p>
+  <div class="fireworks-stage">
+    <canvas id="fw-canvas"></canvas>
+    <div class="fw-hint">Klepni kamkoliv</div>
+  </div>
+  <div class="ctrl-row" style="display:flex;gap:8px;margin-top:12px;justify-content:center;flex-wrap:wrap">
+    <button style="padding:8px 16px;border-radius:20px;border:1px solid rgba(251,191,36,0.3);background:transparent;color:#fbbf24;font-size:12px;cursor:pointer;-webkit-tap-highlight-color:transparent" onclick="autoFireworks()">✨ Auto</button>
+    <button style="padding:8px 16px;border-radius:20px;border:1px solid rgba(126,200,227,0.3);background:transparent;color:#7EC8E3;font-size:12px;cursor:pointer;-webkit-tap-highlight-color:transparent" onclick="bigBang()">💥 Big Bang</button>
+  </div>
+  <p class="tip">→ Nový rok, velký prodej, narozeniny, výročí v appce</p>
+</div>
+
+<script>
+/* ══ CONFETTI ══ */
+const canvas=document.getElementById("confetti-canvas");
+const ctx2=canvas.getContext("2d");
+canvas.width=window.innerWidth;
+canvas.height=window.innerHeight;
+window.addEventListener("resize",()=>{canvas.width=window.innerWidth;canvas.height=window.innerHeight;});
+
+const palettes={
+  gold:   ["#fbbf24","#f59e0b","#fef3c7","#d97706","#ffffff"],
+  green:  ["#34d399","#10b981","#d1fae5","#6ee7b7","#ffffff"],
+  blue:   ["#7EC8E3","#3b82f6","#dbeafe","#a78bfa","#ffffff"],
+  pink:   ["#f9a8d4","#ec4899","#fce7f3","#fb7185","#ffffff"],
+  rainbow:["#f87171","#fb923c","#fbbf24","#34d399","#7EC8E3","#a78bfa","#f9a8d4","#ffffff"],
+};
+
+let confettiPieces=[];
+let confettiRAF=null;
+
+function fireConfetti(type){
+  const pal=palettes[type]||palettes.rainbow;
+  const n=type==="rainbow"?200:120;
+  const newPieces=Array.from({length:n},(_,i)=>({
+    x:Math.random()*canvas.width,
+    y:-10-Math.random()*canvas.height*0.3,
+    vx:(Math.random()-0.5)*6,
+    vy:2+Math.random()*4,
+    rotation:Math.random()*360,
+    rotationSpeed:(Math.random()-0.5)*8,
+    w:6+Math.random()*10,
+    h:3+Math.random()*6,
+    color:pal[Math.floor(Math.random()*pal.length)],
+    shape:Math.random()>0.5?"rect":"circle",
+    alpha:1,
+    gravity:0.12+Math.random()*0.08,
+    wobble:Math.random()*Math.PI*2,
+    wobbleSpeed:0.05+Math.random()*0.05,
+  }));
+
+  // burst from top
+  if(type==="rainbow"){
+    newPieces.forEach(p=>{
+      p.x=canvas.width/2+(Math.random()-0.5)*canvas.width*0.3;
+      p.y=canvas.height*0.3;
+      p.vx=(Math.random()-0.5)*14;
+      p.vy=-8-Math.random()*8;
+      p.gravity=0.25;
+    });
+  }
+
+  confettiPieces.push(...newPieces);
+  if(!confettiRAF) animateConfetti();
+}
+
+function animateConfetti(){
+  ctx2.clearRect(0,0,canvas.width,canvas.height);
+  confettiPieces=confettiPieces.filter(p=>p.alpha>0.01&&p.y<canvas.height+50);
+
+  confettiPieces.forEach(p=>{
+    p.vy+=p.gravity;
+    p.x+=p.vx+Math.sin(p.wobble)*1.5;
+    p.y+=p.vy;
+    p.rotation+=p.rotationSpeed;
+    p.wobble+=p.wobbleSpeed;
+    p.vx*=0.99;
+    if(p.y>canvas.height*0.7) p.alpha-=0.015;
+
+    ctx2.save();
+    ctx2.translate(p.x,p.y);
+    ctx2.rotate(p.rotation*Math.PI/180);
+    ctx2.globalAlpha=p.alpha;
+    ctx2.fillStyle=p.color;
+
+    if(p.shape==="circle"){
+      ctx2.beginPath();
+      ctx2.arc(0,0,p.w/2,0,Math.PI*2);
+      ctx2.fill();
+    } else {
+      ctx2.fillRect(-p.w/2,-p.h/2,p.w,p.h);
+    }
+    ctx2.restore();
+  });
+
+  if(confettiPieces.length>0){
+    confettiRAF=requestAnimationFrame(animateConfetti);
+  } else {
+    confettiRAF=null;
+    ctx2.clearRect(0,0,canvas.width,canvas.height);
+  }
+}
+
+/* ══ SUCCESS ══ */
+function showSuccess(icon,title,sub,badge,type){
+  const card=document.getElementById("success-card");
+  const iconEl=document.getElementById("success-icon");
+  const titleEl=document.getElementById("success-title");
+  const subEl=document.getElementById("success-sub");
+  const badgeEl=document.getElementById("success-badge");
+
+  card.classList.remove("show");
+  iconEl.classList.remove("animate");
+
+  setTimeout(()=>{
+    iconEl.textContent=icon;
+    titleEl.textContent=title;
+    subEl.textContent=sub;
+    badgeEl.textContent=badge;
+
+    const colors={
+      gold:"rgba(251,191,36,0.08)",
+      green:"rgba(52,211,153,0.08)",
+      blue:"rgba(126,200,227,0.08)",
+    };
+    const borders={
+      gold:"rgba(251,191,36,0.25)",
+      green:"rgba(52,211,153,0.25)",
+      blue:"rgba(126,200,227,0.25)",
+    };
+    const titleColors={gold:"#fbbf24",green:"#34d399",blue:"#7EC8E3"};
+
+    card.style.background=colors[type]||colors.green;
+    card.style.borderColor=borders[type]||borders.green;
+    titleEl.style.color=titleColors[type]||titleColors.green;
+    badgeEl.style.color=titleColors[type]||titleColors.green;
+    badgeEl.style.background=colors[type]||colors.green;
+    badgeEl.style.borderColor=borders[type]||borders.green;
+
+    card.classList.add("show");
+    void iconEl.offsetWidth;
+    iconEl.classList.add("animate");
+
+    // fire matching confetti
+    const confettiMap={gold:"gold",green:"green",blue:"blue"};
+    fireConfetti(confettiMap[type]||"green");
+  },150);
+}
+
+/* ══ MILESTONE ══ */
+const milestones=[
+  {emoji:"📧",title:"Ověřit email",sub:"Prvních 5 minut"},
+  {emoji:"🔑",title:"Aktivovat licenci",sub:"Zadej svůj klíč"},
+  {emoji:"👶",title:"Přidat profil dítěte",sub:"Jméno a datum narození"},
+  {emoji:"🌙",title:"První spánek",sub:"Zaznamenej dnešní noc"},
+  {emoji:"🤖",title:"Zeptat se AI Coache",sub:"Napiš první dotaz"},
+  {emoji:"🏆",title:"7 dní v řadě",sub:"Denní sledování splněno"},
+];
+const msState={};
+
+function renderMilestones(){
+  const list=document.getElementById("milestone-list");
+  list.innerHTML=milestones.map((m,i)=>`
+    <div class="milestone-item ${msState[i]?'done':''}" onclick="toggleMilestone(${i})">
+      <div class="ms-icon">${m.emoji}</div>
+      <div class="ms-body">
+        <div class="ms-title">${m.title}</div>
+        <div class="ms-sub">${m.sub}</div>
+      </div>
+      <div class="ms-check">${msState[i]?'✓':''}</div>
+    </div>`).join("");
+}
+
+function toggleMilestone(i){
+  if(msState[i]) return;
+  msState[i]=true;
+  renderMilestones();
+  // small confetti burst
+  const colors=["#34d399","#7EC8E3","#fbbf24","#a78bfa","#ffffff"];
+  confettiPieces.push(...Array.from({length:40},()=>({
+    x:canvas.width/2+(Math.random()-0.5)*canvas.width*0.4,
+    y:canvas.height*0.4,
+    vx:(Math.random()-0.5)*8,
+    vy:-4-Math.random()*5,
+    rotation:Math.random()*360,
+    rotationSpeed:(Math.random()-0.5)*8,
+    w:5+Math.random()*7,h:3+Math.random()*5,
+    color:colors[Math.floor(Math.random()*colors.length)],
+    shape:Math.random()>0.5?"rect":"circle",
+    alpha:1,gravity:0.2,
+    wobble:Math.random()*Math.PI*2,wobbleSpeed:0.05,
+  })));
+  if(!confettiRAF) animateConfetti();
+
+  // check if all done
+  if(Object.keys(msState).length===milestones.length){
+    setTimeout(()=>fireConfetti("rainbow"),400);
+  }
+}
+
+/* ══ ACHIEVEMENTS ══ */
+const achievements=[
+  {emoji:"🌙",title:"Spáčka",sub:"7 nocí sledováno",unlocked:false},
+  {emoji:"🤖",title:"AI Expert",sub:"50 dotazů položeno",unlocked:false},
+  {emoji:"🍼",title:"Kojící máma",sub:"30 dní záznamu",unlocked:false},
+  {emoji:"🏆",title:"Rekordman",sub:"Nejlepší noc 10h+",unlocked:false},
+  {emoji:"💰",title:"Affiliate",sub:"První prodej",unlocked:false},
+  {emoji:"🌍",title:"Expat",sub:"Appka v NL",unlocked:false},
+];
+
+function renderAch(){
+  document.getElementById("ach-grid").innerHTML=achievements.map((a,i)=>`
+    <div class="ach-card ${a.unlocked?'unlocked':''}" onclick="unlockAch(${i})">
+      <div class="ach-lock">🔒</div>
+      <div class="ach-shine"></div>
+      <div class="ach-icon">${a.emoji}</div>
+      <div class="ach-title">${a.title}</div>
+      <div class="ach-sub">${a.sub}</div>
+    </div>`).join("");
+}
+
+function unlockAch(i){
+  if(achievements[i].unlocked) return;
+  achievements[i].unlocked=true;
+  renderAch();
+
+  // golden confetti burst
+  confettiPieces.push(...Array.from({length:60},()=>({
+    x:canvas.width/2+(Math.random()-0.5)*200,
+    y:canvas.height*0.45,
+    vx:(Math.random()-0.5)*10,
+    vy:-5-Math.random()*6,
+    rotation:Math.random()*360,
+    rotationSpeed:(Math.random()-0.5)*10,
+    w:4+Math.random()*8,h:3+Math.random()*5,
+    color:palettes.gold[Math.floor(Math.random()*palettes.gold.length)],
+    shape:Math.random()>0.4?"rect":"circle",
+    alpha:1,gravity:0.2,
+    wobble:Math.random()*Math.PI*2,wobbleSpeed:0.06,
+  })));
+  if(!confettiRAF) animateConfetti();
+}
+
+/* ══ FIREWORKS ══ */
+const fwCanvas=document.getElementById("fw-canvas");
+const fwCtx=fwCanvas.getContext("2d");
+let fwRAF=null;
+let fwParticles=[];
+let autoFwInterval=null;
+
+function setupFwCanvas(){
+  const rect=fwCanvas.parentElement.getBoundingClientRect();
+  fwCanvas.width=rect.width*(window.devicePixelRatio||1);
+  fwCanvas.height=240*(window.devicePixelRatio||1);
+  fwCanvas.style.width=rect.width+"px";
+  fwCanvas.style.height="240px";
+  fwCtx.scale(window.devicePixelRatio||1,window.devicePixelRatio||1);
+  return{w:rect.width,h:240};
+}
+
+function launchFirework(x,y,w,h){
+  const colors=["#fbbf24","#f97316","#7EC8E3","#a78bfa","#34d399","#f87171","#ffffff","#fce7f3"];
+  const n=60+Math.floor(Math.random()*40);
+  for(let i=0;i<n;i++){
+    const angle=Math.random()*Math.PI*2;
+    const speed=2+Math.random()*5;
+    fwParticles.push({
+      x, y,
+      vx:Math.cos(angle)*speed,
+      vy:Math.sin(angle)*speed,
+      alpha:1,
+      size:2+Math.random()*3,
+      color:colors[Math.floor(Math.random()*colors.length)],
+      gravity:0.08+Math.random()*0.05,
+      trail:[],
+    });
+  }
+  if(!fwRAF) animateFw();
+}
+
+function animateFw(){
+  const{w,h}=setupFwCanvas();
+  fwCtx.fillStyle="rgba(0,0,8,0.2)";
+  fwCtx.fillRect(0,0,w,h);
+
+  fwParticles=fwParticles.filter(p=>p.alpha>0.02);
+
+  fwParticles.forEach(p=>{
+    p.trail.push({x:p.x,y:p.y});
+    if(p.trail.length>6) p.trail.shift();
+
+    p.vx*=0.97; p.vy+=p.gravity;
+    p.x+=p.vx; p.y+=p.vy;
+    p.alpha-=0.016;
+
+    // trail
+    p.trail.forEach((t,i)=>{
+      fwCtx.beginPath();
+      fwCtx.arc(t.x,t.y,p.size*(i/p.trail.length)*0.5,0,Math.PI*2);
+      fwCtx.fillStyle=p.color;
+      fwCtx.globalAlpha=p.alpha*(i/p.trail.length)*0.4;
+      fwCtx.fill();
+    });
+
+    // main particle
+    fwCtx.beginPath();
+    fwCtx.arc(p.x,p.y,p.size,0,Math.PI*2);
+    fwCtx.fillStyle=p.color;
+    fwCtx.globalAlpha=p.alpha;
+    fwCtx.fill();
+
+    // glow
+    fwCtx.beginPath();
+    fwCtx.arc(p.x,p.y,p.size*2,0,Math.PI*2);
+    fwCtx.fillStyle=p.color;
+    fwCtx.globalAlpha=p.alpha*0.15;
+    fwCtx.fill();
+  });
+  fwCtx.globalAlpha=1;
+
+  if(fwParticles.length>0) fwRAF=requestAnimationFrame(animateFw);
+  else fwRAF=null;
+}
+
+function autoFireworks(){
+  if(autoFwInterval){clearInterval(autoFwInterval);autoFwInterval=null;return;}
+  const{w,h}=setupFwCanvas();
+  autoFwInterval=setInterval(()=>{
+    launchFirework(
+      50+Math.random()*(w-100),
+      30+Math.random()*(h*0.6),
+      w,h
+    );
+  },600);
+}
+
+function bigBang(){
+  const{w,h}=setupFwCanvas();
+  for(let i=0;i<8;i++){
+    setTimeout(()=>{
+      launchFirework(w/2+(Math.random()-0.5)*w*0.6, 30+Math.random()*h*0.5,w,h);
+    },i*120);
+  }
+  fireConfetti("rainbow");
+}
+
+fwCanvas.addEventListener("click",e=>{
+  const{w,h}=setupFwCanvas();
+  const r=fwCanvas.getBoundingClientRect();
+  launchFirework(e.clientX-r.left, e.clientY-r.top, w, h);
+});
+fwCanvas.addEventListener("touchstart",e=>{
+  const{w,h}=setupFwCanvas();
+  const r=fwCanvas.getBoundingClientRect();
+  launchFirework(e.touches[0].clientX-r.left, e.touches[0].clientY-r.top, w, h);
+  e.preventDefault();
+},{passive:false});
+
+/* ══ TABS ══ */
+function showPanel(name,btn){
+  document.querySelectorAll(".panel").forEach(p=>p.classList.remove("active"));
+  document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
+  document.getElementById("panel-"+name).classList.add("active");
+  if(btn) btn.classList.add("active");
+  if(name==="milestone") renderMilestones();
+  if(name==="achievement") renderAch();
+  if(autoFwInterval&&name!=="fireworks"){clearInterval(autoFwInterval);autoFwInterval=null;}
+}
+
+// init
+renderMilestones();
+renderAch();
+</script>
+</body>
+</html>

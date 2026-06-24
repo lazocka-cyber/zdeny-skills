@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Motion — Zvuk & Vizualizace</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{min-height:100vh;background:#080810;font-family:-apple-system,system-ui,sans-serif;color:#f0f4ff;padding:20px 14px 40px;overflow-x:hidden;}
+  .header{text-align:center;margin-bottom:22px;}
+  .header .label{font-size:10px;letter-spacing:5px;color:#ec4899;text-transform:uppercase;margin-bottom:6px;}
+  .header h1{font-size:22px;font-weight:800;background:linear-gradient(90deg,#ec4899,#fbbf24,#34d399);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+  .tabs{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;margin-bottom:22px;scrollbar-width:none;}
+  .tabs::-webkit-scrollbar{display:none;}
+  .tab{flex-shrink:0;padding:8px 14px;border-radius:20px;border:none;cursor:pointer;font-size:12px;font-weight:600;background:rgba(255,255,255,0.07);color:#8892b0;transition:all .22s;-webkit-tap-highlight-color:transparent;}
+  .tab.active{background:linear-gradient(90deg,#ec4899,#fbbf24);color:#0a0f1e;}
+  .panel{display:none;max-width:480px;margin:0 auto;}
+  .panel.active{display:block;animation:fadeIn .3s ease both;}
+  .hint{text-align:center;color:#8892b0;font-size:13px;margin-bottom:16px;}
+  .tip{text-align:center;font-size:11px;color:#2a2a3a;margin-top:14px;}
+  .canvas-wrap{border-radius:16px;overflow:hidden;}
+  canvas{display:block;width:100%;}
+  .ctrl-row{display:flex;gap:8px;margin-top:12px;justify-content:center;flex-wrap:wrap;}
+  .ctrl-btn{padding:8px 16px;border-radius:20px;border:1px solid rgba(236,72,153,0.2);background:transparent;color:#555;font-size:11px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:all .2s;-webkit-tap-highlight-color:transparent;}
+  .ctrl-btn:active,.ctrl-btn.active-ctrl{border-color:#ec4899;color:#ec4899;}
+  .play-btn{display:block;margin:12px auto;padding:12px 28px;border-radius:14px;border:none;background:linear-gradient(90deg,#ec4899,#fbbf24);color:#0a0f1e;font-size:15px;font-weight:700;cursor:pointer;transition:transform .15s;-webkit-tap-highlight-color:transparent;}
+  .play-btn:active{transform:scale(.95);}
+  .mic-note{background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.2);border-radius:12px;padding:12px 16px;font-size:12px;color:#fbbf24;text-align:center;margin-bottom:12px;}
+  @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="label">Motion · Zvuk</div>
+  <h1>🎵 SOUND & VISUAL</h1>
+</div>
+<div class="tabs">
+  <button class="tab active" onclick="showPanel('bars',this)">📊 Bary</button>
+  <button class="tab" onclick="showPanel('waveform',this)">〰 Waveform</button>
+  <button class="tab" onclick="showPanel('circle',this)">⭕ Kruh</button>
+  <button class="tab" onclick="showPanel('beat',this)">💓 Beat</button>
+  <button class="tab" onclick="showPanel('mic',this)">🎤 Mikrofon</button>
+</div>
+
+<!-- BARS -->
+<div id="panel-bars" class="panel active">
+  <p class="hint">Simulace audio vizualizéru</p>
+  <div class="canvas-wrap"><canvas id="c-bars" height="280"></canvas></div>
+  <div class="ctrl-row">
+    <button class="ctrl-btn active-ctrl" onclick="setBarsStyle(0,this)">Classic</button>
+    <button class="ctrl-btn" onclick="setBarsStyle(1,this)">Mirror</button>
+    <button class="ctrl-btn" onclick="setBarsStyle(2,this)">Rounded</button>
+  </div>
+  <div class="ctrl-row">
+    <button class="ctrl-btn active-ctrl" onclick="setBarsColor(0,this)">Neon</button>
+    <button class="ctrl-btn" onclick="setBarsColor(1,this)">Zlatá</button>
+    <button class="ctrl-btn" onclick="setBarsColor(2,this)">Duha</button>
+  </div>
+  <p class="tip">→ Hudební přehrávač, podcast vizuál, AI hlas indikátor</p>
+</div>
+
+<!-- WAVEFORM -->
+<div id="panel-waveform" class="panel">
+  <p class="hint">Hlasová vlna — simulace AI odpovědi</p>
+  <div class="canvas-wrap"><canvas id="c-waveform" height="280"></canvas></div>
+  <div class="ctrl-row">
+    <button class="ctrl-btn active-ctrl" onclick="setWaveState('speaking',this)">🗣 Mluví</button>
+    <button class="ctrl-btn" onclick="setWaveState('listening',this)">👂 Poslouchá</button>
+    <button class="ctrl-btn" onclick="setWaveState('idle',this)">💤 Klidný</button>
+  </div>
+  <p class="tip">→ AI Slaapcoach — vizuální feedback při mluvení</p>
+</div>
+
+<!-- CIRCLE VISUALIZER -->
+<div id="panel-circle" class="panel">
+  <p class="hint">Kruhový vizualizér</p>
+  <div class="canvas-wrap"><canvas id="c-circle" height="280"></canvas></div>
+  <div class="ctrl-row">
+    <button class="ctrl-btn active-ctrl" onclick="setCircleStyle(0,this)">Spikes</button>
+    <button class="ctrl-btn" onclick="setCircleStyle(1,this)">Fill</button>
+    <button class="ctrl-btn" onclick="setCircleStyle(2,this)">Dots</button>
+  </div>
+  <p class="tip">→ Podcast cover animace, hudební přehrávač, meditace</p>
+</div>
+
+<!-- BEAT DETECTION -->
+<div id="panel-beat" class="panel">
+  <p class="hint">Klepni do rytmu — vizuál reaguje</p>
+  <div class="canvas-wrap"><canvas id="c-beat" height="280"></canvas></div>
+  <button class="play-btn" id="beat-btn" onclick="tapBeat()">🥁 Klepni do rytmu</button>
+  <div id="beat-bpm" style="text-align:center;font-size:13px;color:#8892b0;margin-top:8px">BPM: --</div>
+  <p class="tip">→ Rytmické hry, taneční appky, interaktivní hudební obsah</p>
+</div>
+
+<!-- MIC INPUT -->
+<div id="panel-mic" class="panel">
+  <div class="mic-note">⚠️ Tato záložka potřebuje povolení mikrofonu v prohlížeči</div>
+  <p class="hint">Vizualizace tvého hlasu v reálném čase</p>
+  <div class="canvas-wrap"><canvas id="c-mic" height="240"></canvas></div>
+  <button class="play-btn" id="mic-btn" onclick="toggleMic()">🎤 Zapnout mikrofon</button>
+  <p class="tip">→ Voice recorder, AI hlasový vstup, karaoke appka</p>
+</div>
+
+<script>
+function lerp(a,b,t){return a+(b-a)*t}
+function rand(a,b){return a+Math.random()*(b-a)}
+function setupCanvas(id,h2=280){
+  const c=document.getElementById(id),dpr=window.devicePixelRatio||1;
+  const rect=c.parentElement.getBoundingClientRect();
+  c.width=rect.width*dpr;c.height=h2*dpr;
+  c.style.width=rect.width+"px";c.style.height=h2+"px";
+  const ctx=c.getContext("2d");ctx.scale(dpr,dpr);
+  return{canvas:c,ctx,w:rect.width,h:h2};
+}
+
+/* Simulated audio data */
+let audioData=new Float32Array(64).fill(0);
+let audioPhase=0;
+function simulateAudio(intensity=1,type="music"){
+  audioPhase+=0.08;
+  for(let i=0;i<64;i++){
+    const base=Math.pow(1-i/64,2);
+    const wave=Math.sin(audioPhase*(1+i*0.05))*0.5+0.5;
+    const kick=type==="beat"?Math.pow(Math.max(0,Math.sin(audioPhase*0.5)),8)*0.8:0;
+    audioData[i]=lerp(audioData[i],(base*0.6+wave*0.4+kick)*intensity+rand(0,0.05),0.25);
+  }
+}
+
+/* ══ BARS ══ */
+let barsRAF,barsStyle=0,barsColor=0;
+function initBars(){
+  cancelAnimationFrame(barsRAF);
+  const{canvas,ctx,w,h}=setupCanvas("c-bars");
+  function tick(){
+    simulateAudio(0.9);
+    ctx.fillStyle="#080810";ctx.fillRect(0,0,w,h);
+    const n=audioData.length,bw=(w-n*2)/n;
+    audioData.forEach((v,i)=>{
+      const bh=v*h*(barsStyle===1?0.45:0.85);
+      let color;
+      if(barsColor===0)color=`hsl(${180+i*2},80%,${50+v*30}%)`;
+      else if(barsColor===1)color=`hsl(${40+i*0.5},${80+v*20}%,${50+v*30}%)`;
+      else color=`hsl(${i*5},80%,60%)`;
+      const x=i*(bw+2)+1;
+      if(barsStyle===0){
+        if(barsColor===0){const g=ctx.createLinearGradient(0,h,0,h-bh);g.addColorStop(0,"#ec4899");g.addColorStop(1,"#7EC8E3");ctx.fillStyle=g;}
+        else ctx.fillStyle=color;
+        ctx.fillRect(x,h-bh,bw,bh);
+      } else if(barsStyle===1){
+        ctx.fillStyle=color;
+        ctx.fillRect(x,h/2-bh,bw,bh);
+        ctx.fillRect(x,h/2,bw,bh);
+      } else {
+        ctx.fillStyle=color;
+        const r2=Math.min(bw/2,3);
+        ctx.beginPath();ctx.rect(x,h-bh,bw,bh);ctx.fill();
+      }
+      // peak dot
+      ctx.beginPath();ctx.arc(x+bw/2,h-bh-3,2,0,Math.PI*2);
+      ctx.fillStyle=barsColor===1?"#fbbf24":"#fff";ctx.fill();
+    });
+    barsRAF=requestAnimationFrame(tick);
+  }
+  barsRAF=requestAnimationFrame(tick);
+}
+function setBarsStyle(s,btn){barsStyle=s;document.querySelectorAll("#panel-bars .ctrl-row:first-of-type .ctrl-btn").forEach(b=>b.classList.remove("active-ctrl"));btn.classList.add("active-ctrl");}
+function setBarsColor(c,btn){barsColor=c;document.querySelectorAll("#panel-bars .ctrl-row:last-of-type .ctrl-btn").forEach(b=>b.classList.remove("active-ctrl"));btn.classList.add("active-ctrl");}
+
+/* ══ WAVEFORM ══ */
+let waveRAF,waveState="speaking";
+function initWaveform(){
+  cancelAnimationFrame(waveRAF);
+  const{canvas,ctx,w,h}=setupCanvas("c-waveform");
+  let phase=0;
+  function tick(t){
+    ctx.fillStyle="#080810";ctx.fillRect(0,0,w,h);
+    const intensity=waveState==="speaking"?1:waveState==="listening"?0.4:0.08;
+    const speed=waveState==="speaking"?0.12:waveState==="listening"?0.05:0.02;
+    phase+=speed;
+    // multiple wave layers
+    [0.6,0.8,1].forEach((amp,li)=>{
+      const color=li===2?"#ec4899":li===1?"#a78bfa":"#7EC8E3";
+      ctx.beginPath();
+      for(let x=0;x<=w;x+=2){
+        const px=x/w;
+        let y=h/2;
+        y+=Math.sin(px*Math.PI*6+phase)*h*0.15*amp*intensity;
+        y+=Math.sin(px*Math.PI*12+phase*1.3)*h*0.07*amp*intensity;
+        y+=Math.sin(px*Math.PI*3+phase*0.7)*h*0.1*amp*intensity;
+        x===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+      }
+      ctx.strokeStyle=color+(li===2?"cc":"66");
+      ctx.lineWidth=2-li*0.4;ctx.stroke();
+    });
+    // center line
+    ctx.strokeStyle="rgba(255,255,255,0.1)";ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(0,h/2);ctx.lineTo(w,h/2);ctx.stroke();
+    // state label
+    ctx.fillStyle="#8892b0";ctx.font="12px sans-serif";ctx.textAlign="center";ctx.textBaseline="bottom";
+    const labels={speaking:"🗣 AI Slaapcoach mluví...",listening:"👂 Poslouchám...",idle:"💤 Připraven"};
+    ctx.fillText(labels[waveState],w/2,h-12);
+    waveRAF=requestAnimationFrame(tick);
+  }
+  waveRAF=requestAnimationFrame(tick);
+}
+function setWaveState(s,btn){waveState=s;document.querySelectorAll("#panel-waveform .ctrl-btn").forEach(b=>b.classList.remove("active-ctrl"));btn.classList.add("active-ctrl");}
+
+/* ══ CIRCLE ══ */
+let circRAF,circStyle=0;
+function initCircle(){
+  cancelAnimationFrame(circRAF);
+  const{canvas,ctx,w,h}=setupCanvas("c-circle");
+  function tick(){
+    simulateAudio(0.85);
+    ctx.fillStyle="rgba(8,8,16,0.3)";ctx.fillRect(0,0,w,h);
+    const cx=w/2,cy=h/2,baseR=Math.min(w,h)*0.22,n=audioData.length;
+    if(circStyle===0){
+      // spikes
+      audioData.forEach((v,i)=>{
+        const angle=(i/n)*Math.PI*2-Math.PI/2;
+        const r=baseR+v*baseR*1.2;
+        const hue=180+i*5;
+        ctx.beginPath();ctx.moveTo(cx+Math.cos(angle)*baseR*0.9,cy+Math.sin(angle)*baseR*0.9);
+        ctx.lineTo(cx+Math.cos(angle)*r,cy+Math.sin(angle)*r);
+        ctx.strokeStyle=`hsl(${hue},80%,${55+v*30}%)`;ctx.lineWidth=2;ctx.stroke();
+      });
+    } else if(circStyle===1){
+      // filled polygon
+      ctx.beginPath();
+      audioData.forEach((v,i)=>{
+        const angle=(i/n)*Math.PI*2-Math.PI/2;
+        const r=baseR+v*baseR;
+        i===0?ctx.moveTo(cx+Math.cos(angle)*r,cy+Math.sin(angle)*r):ctx.lineTo(cx+Math.cos(angle)*r,cy+Math.sin(angle)*r);
+      });
+      ctx.closePath();
+      const g=ctx.createRadialGradient(cx,cy,0,cx,cy,baseR*2);
+      g.addColorStop(0,"rgba(236,72,153,0.5)");g.addColorStop(0.5,"rgba(167,139,250,0.3)");g.addColorStop(1,"transparent");
+      ctx.fillStyle=g;ctx.fill();
+      ctx.strokeStyle="#ec4899";ctx.lineWidth=1.5;ctx.stroke();
+    } else {
+      // dots
+      audioData.forEach((v,i)=>{
+        const angle=(i/n)*Math.PI*2-Math.PI/2;
+        const r=baseR+v*baseR;
+        const size=2+v*6;
+        const hue=i*5+180;
+        ctx.beginPath();ctx.arc(cx+Math.cos(angle)*r,cy+Math.sin(angle)*r,size,0,Math.PI*2);
+        ctx.fillStyle=`hsl(${hue},80%,65%)`;ctx.fill();
+      });
+    }
+    // inner circle
+    ctx.beginPath();ctx.arc(cx,cy,baseR*0.85,0,Math.PI*2);
+    ctx.fillStyle="rgba(8,8,16,0.7)";ctx.fill();
+    // center text
+    ctx.fillStyle="#fff";ctx.font=`bold ${Math.min(w*0.05,18)}px sans-serif`;
+    ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText("♪",cx,cy);
+    circRAF=requestAnimationFrame(tick);
+  }
+  circRAF=requestAnimationFrame(tick);
+}
+function setCircleStyle(s,btn){circStyle=s;document.querySelectorAll("#panel-circle .ctrl-btn").forEach(b=>b.classList.remove("active-ctrl"));btn.classList.add("active-ctrl");}
+
+/* ══ BEAT ══ */
+let beatRAF,beatTaps=[],beatParticles=[];
+function initBeat(){
+  cancelAnimationFrame(beatRAF);
+  const{canvas,ctx,w,h}=setupCanvas("c-beat");
+  function tick(){
+    ctx.fillStyle="rgba(8,8,16,0.25)";ctx.fillRect(0,0,w,h);
+    const now=Date.now();
+    // decay particles
+    beatParticles=beatParticles.filter(p=>p.alpha>0.01);
+    beatParticles.forEach(p=>{p.r+=p.speed;p.alpha-=0.018;
+      ctx.beginPath();ctx.arc(w/2,h/2,p.r,0,Math.PI*2);
+      ctx.strokeStyle=`rgba(${p.color},${p.alpha})`;ctx.lineWidth=2;ctx.stroke();
+    });
+    // bpm display
+    const bpm=getBPM();
+    const pulse=bpm>0?Math.pow(Math.max(0,Math.sin(now/1000*(bpm/60)*Math.PI)),8):0;
+    const r2=40+pulse*30;
+    const g=ctx.createRadialGradient(w/2,h/2,0,w/2,h/2,r2+20);
+    g.addColorStop(0,`rgba(236,72,153,${0.3+pulse*0.5})`);
+    g.addColorStop(1,"transparent");
+    ctx.fillStyle=g;ctx.fillRect(0,0,w,h);
+    ctx.beginPath();ctx.arc(w/2,h/2,r2,0,Math.PI*2);
+    ctx.fillStyle=`rgba(236,72,153,${0.4+pulse*0.4})`;ctx.fill();
+    ctx.fillStyle="#fff";ctx.font=`bold ${Math.min(w*0.06,22)}px sans-serif`;
+    ctx.textAlign="center";ctx.textBaseline="middle";
+    ctx.fillText(bpm>0?bpm+" BPM":"🥁",w/2,h/2);
+    beatRAF=requestAnimationFrame(tick);
+  }
+  beatRAF=requestAnimationFrame(tick);
+}
+function tapBeat(){
+  const now=Date.now();
+  beatTaps.push(now);
+  if(beatTaps.length>8)beatTaps.shift();
+  document.getElementById("beat-bpm").textContent=`BPM: ${getBPM()||"--"}`;
+  // burst
+  for(let i=0;i<3;i++){
+    beatParticles.push({r:40+i*20,speed:3+i*2,alpha:0.8,color:"236,72,153"});
+    beatParticles.push({r:40+i*20,speed:2+i*1.5,alpha:0.6,color:"251,191,36"});
+  }
+  const btn=document.getElementById("beat-btn");
+  btn.style.transform="scale(0.94)";
+  setTimeout(()=>btn.style.transform="scale(1)",100);
+}
+function getBPM(){
+  if(beatTaps.length<2)return 0;
+  const recent=beatTaps.slice(-6);
+  const diffs=recent.slice(1).map((t,i)=>t-recent[i]);
+  const avg=diffs.reduce((a,b)=>a+b,0)/diffs.length;
+  return avg>0?Math.round(60000/avg):0;
+}
+
+/* ══ MIC ══ */
+let micActive=false,micStream=null,micAna=null,micRAF;
+function initMicCanvas(){
+  const{canvas,ctx,w,h}=setupCanvas("c-mic",240);
+  ctx.fillStyle="#080810";ctx.fillRect(0,0,w,h);
+  ctx.fillStyle="#2a2a3a";ctx.font="14px sans-serif";ctx.textAlign="center";ctx.textBaseline="middle";
+  ctx.fillText("Klepni Zapnout mikrofon",w/2,h/2);
+}
+async function toggleMic(){
+  const btn=document.getElementById("mic-btn");
+  if(micActive){
+    micActive=false;cancelAnimationFrame(micRAF);
+    if(micStream)micStream.getTracks().forEach(t=>t.stop());
+    btn.textContent="🎤 Zapnout mikrofon";
+    initMicCanvas();return;
+  }
+  try{
+    const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+    micStream=stream;micActive=true;btn.textContent="⏹ Zastavit";
+    const ac=new AudioContext();
+    const src=ac.createMediaStreamSource(stream);
+    const ana=ac.createAnalyser();
+    ana.fftSize=128;src.connect(ana);micAna=ana;
+    const{canvas,ctx,w,h}=setupCanvas("c-mic",240);
+    const data=new Uint8Array(ana.frequencyBinCount);
+    function tick(){
+      if(!micActive)return;
+      ana.getByteFrequencyData(data);
+      ctx.fillStyle="rgba(8,8,16,0.3)";ctx.fillRect(0,0,w,h);
+      const bw=w/data.length;
+      data.forEach((v,i)=>{
+        const bh=(v/255)*h*0.85;
+        const hue=180+i*3;
+        const g=ctx.createLinearGradient(0,h,0,h-bh);
+        g.addColorStop(0,"#ec4899");g.addColorStop(1,`hsl(${hue},80%,60%)`);
+        ctx.fillStyle=g;ctx.fillRect(i*bw,h-bh,bw-1,bh);
+      });
+      micRAF=requestAnimationFrame(tick);
+    }
+    micRAF=requestAnimationFrame(tick);
+  } catch(e){alert("Mikrofon nedostupný nebo zamítnut. Zkus v jiném prohlížeči.");}
+}
+initMicCanvas();
+
+/* ══ TABS ══ */
+function showPanel(name,btn){
+  cancelAnimationFrame(barsRAF);cancelAnimationFrame(waveRAF);cancelAnimationFrame(circRAF);cancelAnimationFrame(beatRAF);
+  document.querySelectorAll(".panel").forEach(p=>p.classList.remove("active"));
+  document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
+  document.getElementById("panel-"+name).classList.add("active");
+  if(btn)btn.classList.add("active");
+  if(name==="bars")setTimeout(initBars,50);
+  if(name==="waveform")setTimeout(initWaveform,50);
+  if(name==="circle")setTimeout(initCircle,50);
+  if(name==="beat")setTimeout(initBeat,50);
+  if(name==="mic")initMicCanvas();
+}
+setTimeout(initBars,200);
+</script>
+</body>
+</html>

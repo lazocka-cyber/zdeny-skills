@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Motion — Glitch & Distortion</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    min-height: 100vh;
+    background: #080808;
+    font-family: 'Courier New', monospace;
+    color: #f0f0f0;
+    padding: 20px 14px 40px;
+    overflow-x: hidden;
+  }
+  .header {
+    text-align: center; margin-bottom: 24px;
+    animation: fadeIn 0.6s ease both;
+  }
+  .header .label { font-size: 10px; letter-spacing: 6px; color: #ff0040; text-transform: uppercase; margin-bottom: 8px; }
+  .header h1 {
+    font-size: 22px; font-weight: 900; letter-spacing: 3px;
+    color: #fff;
+    text-shadow: 3px 0 #ff0040, -3px 0 #00ffff;
+  }
+
+  .tabs {
+    display: flex; gap: 8px; overflow-x: auto;
+    padding-bottom: 4px; margin-bottom: 24px; scrollbar-width: none;
+  }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab {
+    flex-shrink: 0; padding: 8px 14px; border-radius: 2px;
+    border: 1px solid #222; cursor: pointer; font-size: 11px; font-weight: 700;
+    background: transparent; color: #444; letter-spacing: 2px;
+    text-transform: uppercase;
+    transition: all 0.2s; -webkit-tap-highlight-color: transparent;
+    font-family: 'Courier New', monospace;
+  }
+  .tab.active { border-color: #ff0040; color: #ff0040; text-shadow: 0 0 8px #ff0040; }
+
+  .panel { display: none; max-width: 480px; margin: 0 auto; }
+  .panel.active { display: block; animation: fadeIn 0.3s ease both; }
+  .hint { text-align: center; color: #444; font-size: 11px; letter-spacing: 2px; margin-bottom: 16px; text-transform: uppercase; }
+  .tip  { text-align: center; font-size: 10px; color: #222; margin-top: 14px; letter-spacing: 1px; font-family: 'Courier New', monospace; }
+
+  .canvas-wrap { border-radius: 4px; overflow: hidden; position: relative; border: 1px solid #1a1a1a; }
+  canvas { display: block; width: 100%; }
+
+  .ctrl-row { display: flex; gap: 8px; margin-top: 12px; justify-content: center; flex-wrap: wrap; }
+  .ctrl-btn {
+    padding: 8px 16px; border-radius: 2px;
+    border: 1px solid #222; background: transparent;
+    color: #444; font-size: 11px; letter-spacing: 2px;
+    text-transform: uppercase; cursor: pointer; font-family: 'Courier New', monospace;
+    transition: all 0.2s; -webkit-tap-highlight-color: transparent;
+  }
+  .ctrl-btn:active, .ctrl-btn.active-ctrl { border-color: #ff0040; color: #ff0040; }
+
+  @keyframes fadeIn { from{opacity:0}to{opacity:1} }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="label">Motion · Glitch</div>
+  <h1>GL1TCH & D1STORT10N</h1>
+</div>
+
+<div class="tabs">
+  <button class="tab active" onclick="showPanel('glitchtext',this)">Text</button>
+  <button class="tab" onclick="showPanel('rgbsplit',this)">RGB</button>
+  <button class="tab" onclick="showPanel('vhs',this)">VHS</button>
+  <button class="tab" onclick="showPanel('pixelbreak',this)">Pixel</button>
+  <button class="tab" onclick="showPanel('scanlines',this)">Scan</button>
+</div>
+
+<!-- 1. GLITCH TEXT -->
+<div id="panel-glitchtext" class="panel active">
+  <p class="hint">Klepni — text se rozpadne</p>
+  <div class="canvas-wrap"><canvas id="c-glitchtext" height="320"></canvas></div>
+  <div class="ctrl-row">
+    <button class="ctrl-btn active-ctrl" onclick="setGlitchWord('GLITCH',this)">GLITCH</button>
+    <button class="ctrl-btn" onclick="setGlitchWord('ERROR',this)">ERROR</button>
+    <button class="ctrl-btn" onclick="setGlitchWord('SYSTEM',this)">SYSTEM</button>
+    <button class="ctrl-btn" onclick="setGlitchWord('BACH',this)">BACH</button>
+  </div>
+  <p class="tip">// hero headline, error screen, brand reveal</p>
+</div>
+
+<!-- 2. RGB SPLIT -->
+<div id="panel-rgbsplit" class="panel">
+  <p class="hint">Pohybuj prstem — RGB kanály se rozjedou</p>
+  <div class="canvas-wrap"><canvas id="c-rgbsplit" height="320"></canvas></div>
+  <div class="ctrl-row">
+    <button class="ctrl-btn active-ctrl" onclick="setRGBIntensity(0.3,this)">Jemný</button>
+    <button class="ctrl-btn" onclick="setRGBIntensity(1,this)">Střední</button>
+    <button class="ctrl-btn" onclick="setRGBIntensity(2.5,this)">Extrémní</button>
+  </div>
+  <p class="tip">// hover efekt na fotky, video thumbnail, intro animace</p>
+</div>
+
+<!-- 3. VHS -->
+<div id="panel-vhs" class="panel">
+  <p class="hint">Retrofiltr z 80. let — klepni pro výpadek</p>
+  <div class="canvas-wrap"><canvas id="c-vhs" height="320"></canvas></div>
+  <div class="ctrl-row">
+    <button class="ctrl-btn active-ctrl" onclick="setVHSMode(0,this)">Vintage</button>
+    <button class="ctrl-btn" onclick="setVHSMode(1,this)">Glitch</button>
+    <button class="ctrl-btn" onclick="setVHSMode(2,this)">Výpadek</button>
+  </div>
+  <p class="tip">// retro brand, nostalgický styl, Stranger Things vibe</p>
+</div>
+
+<!-- 4. PIXEL BREAK -->
+<div id="panel-pixelbreak" class="panel">
+  <p class="hint">Klepni — text se rozpadne na pixely</p>
+  <div class="canvas-wrap"><canvas id="c-pixelbreak" height="320"></canvas></div>
+  <div class="ctrl-row">
+    <button class="ctrl-btn active-ctrl" onclick="triggerPixelBreak('explode',this)">Výbuch</button>
+    <button class="ctrl-btn" onclick="triggerPixelBreak('fall',this)">Pád</button>
+    <button class="ctrl-btn" onclick="triggerPixelBreak('assemble',this)">Sestavit</button>
+  </div>
+  <p class="tip">// page transition, 404 stránka, hero reveal animace</p>
+</div>
+
+<!-- 5. SCANLINES -->
+<div id="panel-scanlines" class="panel">
+  <p class="hint">CRT monitor efekt — pohybuj prstem</p>
+  <div class="canvas-wrap"><canvas id="c-scanlines" height="320"></canvas></div>
+  <div class="ctrl-row">
+    <button class="ctrl-btn active-ctrl" onclick="setScanMode(0,this)">CRT</button>
+    <button class="ctrl-btn" onclick="setScanMode(1,this)">Matrix</button>
+    <button class="ctrl-btn" onclick="setScanMode(2,this)">Hologram</button>
+  </div>
+  <p class="tip">// sci-fi UI, terminal vizuál, tech dashboard</p>
+</div>
+
+<script>
+function lerp(a,b,t){return a+(b-a)*t}
+function rand(min,max){return min+Math.random()*(max-min)}
+
+function setupCanvas(id){
+  const canvas=document.getElementById(id);
+  const dpr=window.devicePixelRatio||1;
+  const rect=canvas.parentElement.getBoundingClientRect();
+  canvas.width=rect.width*dpr;
+  canvas.height=320*dpr;
+  canvas.style.width=rect.width+"px";
+  canvas.style.height="320px";
+  const ctx=canvas.getContext("2d");
+  ctx.scale(dpr,dpr);
+  return{canvas,ctx,w:rect.width,h:320};
+}
+
+/* ══════════════════════════
+   1. GLITCH TEXT
+══════════════════════════ */
+let glitchRAF, glitchWord="GLITCH", glitchIntensity=0;
+
+function initGlitchText(){
+  cancelAnimationFrame(glitchRAF);
+  const{canvas,ctx,w,h}=setupCanvas("c-glitchtext");
+  let glitching=false, glitchT=0;
+
+  canvas.addEventListener("click",()=>{glitching=true;glitchT=performance.now();glitchIntensity=1;});
+  canvas.addEventListener("touchstart",()=>{glitching=true;glitchT=performance.now();glitchIntensity=1;},{passive:true});
+
+  // random glitch chars
+  const chars="!@#$%^&*<>?/\\|{}[]0123456789ABCDEF";
+  function glitchChar(){ return chars[Math.floor(Math.random()*chars.length)]; }
+
+  function drawText(ctx,text,x,y,color,offsetX=0,offsetY=0,alpha=1){
+    ctx.globalAlpha=alpha;
+    ctx.fillStyle=color;
+    ctx.fillText(text,x+offsetX,y+offsetY);
+    ctx.globalAlpha=1;
+  }
+
+  function tick(t){
+    ctx.fillStyle="#080808";
+    ctx.fillRect(0,0,w,h);
+
+    const fs=Math.min(w*0.18,72);
+    ctx.font=`900 ${fs}px 'Courier New', monospace`;
+    ctx.textAlign="center";
+    ctx.textBaseline="middle";
+
+    const elapsed=glitching?(t-glitchT)/1000:0;
+    if(elapsed>1.5) glitching=false;
+    glitchIntensity=glitching?Math.max(0,1-elapsed/1.5):Math.sin(t/3000)*0.15;
+
+    const intense=glitchIntensity;
+
+    // scanlines on text area
+    for(let y2=0;y2<h;y2+=4){
+      ctx.fillStyle=`rgba(0,0,0,${0.3+Math.random()*0.1})`;
+      ctx.fillRect(0,y2,w,1);
+    }
+
+    // glitch slices
+    if(intense>0.1){
+      const slices=Math.floor(intense*8);
+      for(let i=0;i<slices;i++){
+        const sy=rand(h*0.2,h*0.8);
+        const sh=rand(2,12);
+        const sx=rand(-30,30)*intense;
+        ctx.save();
+        ctx.fillStyle="#080808";
+        ctx.fillRect(0,sy,w,sh);
+        ctx.restore();
+      }
+    }
+
+    // RGB layers
+    const rx=intense*rand(-15,15);
+    const gy=intense*rand(-5,5);
+
+    // red channel
+    ctx.globalCompositeOperation="screen";
+    drawText(ctx,glitchWord,w/2,h/2,"#ff0040",rx*2,0,0.7);
+    // cyan channel
+    drawText(ctx,glitchWord,w/2,h/2,"#00ffff",-rx,gy,0.7);
+    ctx.globalCompositeOperation="source-over";
+
+    // main white
+    // scramble some chars
+    let displayWord=glitchWord;
+    if(intense>0.3){
+      displayWord=glitchWord.split("").map(c=>Math.random()<intense*0.5?glitchChar():c).join("");
+    }
+    ctx.fillStyle="#ffffff";
+    ctx.globalAlpha=1;
+    ctx.fillText(displayWord,w/2,h/2);
+
+    // noise overlay
+    if(intense>0.05){
+      for(let i=0;i<intense*40;i++){
+        const nx=rand(0,w), ny=rand(0,h);
+        const nw=rand(20,100), nh=rand(1,3);
+        ctx.fillStyle=`rgba(255,255,255,${rand(0.05,0.15)})`;
+        ctx.fillRect(nx,ny,nw,nh);
+      }
+    }
+
+    // "REC" indicator
+    ctx.font="bold 11px 'Courier New'";
+    ctx.fillStyle=`rgba(255,0,64,${0.5+Math.sin(t/500)*0.5})`;
+    ctx.textAlign="left";
+    ctx.fillText("● REC",12,22);
+    ctx.textAlign="right";
+    ctx.fillStyle="#444";
+    ctx.fillText("SYS:OK",w-12,22);
+
+    glitchRAF=requestAnimationFrame(tick);
+  }
+  glitchRAF=requestAnimationFrame(tick);
+}
+
+function setGlitchWord(word,btn){
+  glitchWord=word;
+  document.querySelectorAll("#panel-glitchtext .ctrl-btn").forEach(b=>b.classList.remove("active-ctrl"));
+  btn.classList.add("active-ctrl");
+}
+
+/* ══════════════════════════
+   2. RGB SPLIT
+══════════════════════════ */
+let rgbRAF, rgbIntensity=0.3;
+
+function initRGB(){
+  cancelAnimationFrame(rgbRAF);
+  const{canvas,ctx,w,h}=setupCanvas("c-rgbsplit");
+  let mouseX=w/2, mouseY=h/2;
+
+  canvas.addEventListener("mousemove",e=>{const r=canvas.getBoundingClientRect();mouseX=e.clientX-r.left;mouseY=e.clientY-r.top;});
+  canvas.addEventListener("touchmove",e=>{const r=canvas.getBoundingClientRect();mouseX=e.touches[0].clientX-r.left;mouseY=e.touches[0].clientY-r.top;e.preventDefault();},{passive:false});
+
+  // create offscreen with content
+  function drawContent(octx,ow,oh,t){
+    octx.fillStyle="#0a0a0a";
+    octx.fillRect(0,0,ow,oh);
+
+    // grid pattern
+    octx.strokeStyle="#1a1a1a";
+    octx.lineWidth=0.5;
+    for(let x=0;x<ow;x+=30){
+      octx.beginPath();octx.moveTo(x,0);octx.lineTo(x,oh);octx.stroke();
+    }
+    for(let y=0;y<oh;y+=30){
+      octx.beginPath();octx.moveTo(0,y);octx.lineTo(ow,y);octx.stroke();
+    }
+
+    // centered content
+    const fs=Math.min(ow*0.12,48);
+    octx.font=`900 ${fs}px 'Courier New'`;
+    octx.textAlign="center";
+    octx.textBaseline="middle";
+    octx.fillStyle="#ffffff";
+    octx.fillText("RGB SPLIT",ow/2,oh/2-fs*0.6);
+
+    octx.font=`${fs*0.4}px 'Courier New'`;
+    octx.fillStyle="#888";
+    octx.fillText("pohybuj prstem →",ow/2,oh/2+fs*0.6);
+
+    // circles
+    [0.25,0.5,0.75].forEach((cx,i)=>{
+      octx.beginPath();
+      octx.arc(ow*cx,oh*0.75,20,0,Math.PI*2);
+      octx.strokeStyle="#333";
+      octx.lineWidth=1;
+      octx.stroke();
+      octx.fillStyle=["#ff0040","#00ff88","#0088ff"][i];
+      octx.globalAlpha=0.6;
+      octx.fill();
+      octx.globalAlpha=1;
+    });
+  }
+
+  function tick(t){
+    const off=document.createElement("canvas");
+    const dpr=window.devicePixelRatio||1;
+    off.width=w; off.height=h;
+    const octx=off.getContext("2d");
+    drawContent(octx,w,h,t);
+
+    ctx.clearRect(0,0,w,h);
+
+    const dx=(mouseX-w/2)/w*rgbIntensity*30;
+    const dy=(mouseY-h/2)/h*rgbIntensity*15;
+
+    // RED channel offset
+    ctx.globalCompositeOperation="screen";
+    ctx.globalAlpha=0.85;
+    ctx.drawImage(off,dx*2,dy,"#ff0040");
+
+    // save and tint red
+    const r=document.createElement("canvas");
+    r.width=w;r.height=h;
+    const rc=r.getContext("2d");
+    rc.drawImage(off,0,0);
+    rc.globalCompositeOperation="multiply";
+    rc.fillStyle="#ff4466";
+    rc.fillRect(0,0,w,h);
+    ctx.drawImage(r,dx*2,dy*0.5);
+
+    // GREEN channel
+    const g=document.createElement("canvas");
+    g.width=w;g.height=h;
+    const gc=g.getContext("2d");
+    gc.drawImage(off,0,0);
+    gc.globalCompositeOperation="multiply";
+    gc.fillStyle="#44ff88";
+    gc.fillRect(0,0,w,h);
+    ctx.drawImage(g,0,0);
+
+    // BLUE channel
+    const b=document.createElement("canvas");
+    b.width=w;b.height=h;
+    const bc=b.getContext("2d");
+    bc.drawImage(off,0,0);
+    bc.globalCompositeOperation="multiply";
+    bc.fillStyle="#4488ff";
+    bc.fillRect(0,0,w,h);
+    ctx.drawImage(b,-dx*1.5,-dy*0.5);
+
+    ctx.globalCompositeOperation="source-over";
+    ctx.globalAlpha=1;
+
+    // scanlines overlay
+    for(let y=0;y<h;y+=2){
+      ctx.fillStyle="rgba(0,0,0,0.15)";
+      ctx.fillRect(0,y,w,1);
+    }
+
+    rgbRAF=requestAnimationFrame(tick);
+  }
+  rgbRAF=requestAnimationFrame(tick);
+}
+
+function setRGBIntensity(v,btn){
+  rgbIntensity=v;
+  document.querySelectorAll("#panel-rgbsplit .ctrl-btn").forEach(b=>b.classList.remove("active-ctrl"));
+  btn.classList.add("active-ctrl");
+}
+
+/* ══════════════════════════
+   3. VHS
+══════════════════════════ */
+let vhsRAF, vhsMode=0;
+
+function initVHS(){
+  cancelAnimationFrame(vhsRAF);
+  const{canvas,ctx,w,h}=setupCanvas("c-vhs");
+  let glitchEvent=null;
+
+  canvas.addEventListener("click",e=>{glitchEvent={t:performance.now(),x:e.clientX-canvas.getBoundingClientRect().left};});
+  canvas.addEventListener("touchstart",e=>{glitchEvent={t:performance.now(),x:e.touches[0].clientX-canvas.getBoundingClientRect().left};},{passive:true});
+
+  function tick(t){
+    // base content
+    ctx.fillStyle="#0a0806";
+    ctx.fillRect(0,0,w,h);
+
+    // content text
+    const fs=Math.min(w*0.1,40);
+    ctx.font=`bold ${fs}px 'Courier New'`;
+    ctx.textAlign="center";
+    ctx.textBaseline="middle";
+
+    if(vhsMode===1){
+      // matrix rain style bg
+      ctx.fillStyle="#001a00";
+      ctx.fillRect(0,0,w,h);
+    }
+
+    // VHS timestamp
+    ctx.font=`bold ${fs*0.35}px 'Courier New'`;
+    ctx.fillStyle="rgba(255,200,50,0.7)";
+    ctx.textAlign="left";
+    const d=new Date();
+    ctx.fillText(`REC ${d.getHours().toString().padStart(2,"0")}:${d.getMinutes().toString().padStart(2,"0")}:${d.getSeconds().toString().padStart(2,"0")}`,12,h-16);
+    ctx.textAlign="right";
+    ctx.fillText("SP ◄► PLAY",w-12,h-16);
+
+    // main text with VHS wobble
+    ctx.textAlign="center";
+    ctx.font=`900 ${fs}px 'Courier New'`;
+
+    const wobble=Math.sin(t/800)*2*(vhsMode+0.5);
+    const words=["MYSTICKÁ","APATYKA"];
+    words.forEach((word,i)=>{
+      // red ghost
+      ctx.fillStyle="rgba(255,0,64,0.5)";
+      ctx.fillText(word,w/2+rand(-wobble,wobble)*2,h/2+(i-0.5)*fs*1.4+rand(-0.5,0.5)*vhsMode);
+      // cyan ghost
+      ctx.fillStyle="rgba(0,255,255,0.5)";
+      ctx.fillText(word,w/2-rand(-wobble,wobble)*2,h/2+(i-0.5)*fs*1.4+rand(-0.5,0.5)*vhsMode);
+      // white main
+      ctx.fillStyle="#ffffff";
+      ctx.fillText(word,w/2+wobble*0.3,h/2+(i-0.5)*fs*1.4);
+    });
+
+    // horizontal noise bands (VHS tracking)
+    const bandCount=vhsMode===0?2:vhsMode===1?5:10;
+    for(let i=0;i<bandCount;i++){
+      const by=(t/8+(i*h/bandCount))%h;
+      const bh=rand(1,3+vhsMode*2);
+      const bx=rand(-20,20)*vhsMode;
+      ctx.fillStyle=`rgba(255,255,255,${rand(0.02,0.08)*vhsMode*0.5+0.02})`;
+      ctx.fillRect(bx,by,w,bh);
+    }
+
+    // glitch event
+    if(glitchEvent){
+      const age=(t-glitchEvent.t)/1000;
+      if(age<0.4){
+        const lines=Math.floor((0.4-age)/0.4*20);
+        for(let i=0;i<lines;i++){
+          const gy=rand(0,h);
+          const gw=rand(20,w*0.8);
+          const gx=rand(0,w-gw);
+          ctx.fillStyle=`rgba(${rand(0,255)},${rand(0,255)},${rand(0,255)},0.15)`;
+          ctx.fillRect(gx,gy,gw,rand(2,6));
+        }
+      } else glitchEvent=null;
+    }
+
+    // scanlines
+    for(let y=0;y<h;y+=3){
+      ctx.fillStyle="rgba(0,0,0,0.2)";
+      ctx.fillRect(0,y,w,1);
+    }
+
+    // vignette
+    const vg=ctx.createRadialGradient(w/2,h/2,h*0.2,w/2,h/2,h*0.8);
+    vg.addColorStop(0,"transparent");
+    vg.addColorStop(1,"rgba(0,0,0,0.6)");
+    ctx.fillStyle=vg;
+    ctx.fillRect(0,0,w,h);
+
+    vhsRAF=requestAnimationFrame(tick);
+  }
+  vhsRAF=requestAnimationFrame(tick);
+}
+function setVHSMode(m,btn){
+  vhsMode=m;
+  document.querySelectorAll("#panel-vhs .ctrl-btn").forEach(b=>b.classList.remove("active-ctrl"));
+  btn.classList.add("active-ctrl");
+}
+
+/* ══════════════════════════
+   4. PIXEL BREAK
+══════════════════════════ */
+let pixelRAF, pixelMode="assemble";
+
+function initPixelBreak(){
+  cancelAnimationFrame(pixelRAF);
+  const{canvas,ctx,w,h}=setupCanvas("c-pixelbreak");
+  triggerPixelBreak("assemble",null);
+}
+
+function triggerPixelBreak(mode,btn){
+  pixelMode=mode;
+  if(btn){
+    document.querySelectorAll("#panel-pixelbreak .ctrl-btn").forEach(b=>b.classList.remove("active-ctrl"));
+    btn.classList.add("active-ctrl");
+  }
+  cancelAnimationFrame(pixelRAF);
+  const{canvas,ctx,w,h}=setupCanvas("c-pixelbreak");
+
+  // render text to offscreen
+  const off=document.createElement("canvas");
+  off.width=w; off.height=h;
+  const octx=off.getContext("2d");
+  octx.fillStyle="#000";
+  octx.fillRect(0,0,w,h);
+  const fs=Math.min(w*0.15,58);
+  octx.font=`900 ${fs}px 'Courier New'`;
+  octx.textAlign="center";
+  octx.textBaseline="middle";
+  octx.fillStyle="#fff";
+  octx.fillText("GLITCH",w/2,h/2-fs*0.5);
+  octx.fillStyle="#ff0040";
+  octx.fillText("SYSTEM",w/2,h/2+fs*0.5);
+
+  // sample pixels
+  const imgData=octx.getImageData(0,0,w,h);
+  const step=5;
+  const pixels=[];
+  for(let y=0;y<h;y+=step){
+    for(let x=0;x<w;x+=step){
+      const i=(y*w+x)*4;
+      if(imgData.data[i+3]>50){
+        const r=imgData.data[i], g=imgData.data[i+1], b=imgData.data[i+2];
+        pixels.push({
+          tx:x, ty:y,
+          x: mode==="assemble"?rand(0,w): mode==="fall"?x:x,
+          y: mode==="assemble"?rand(0,h): mode==="fall"?-step:y,
+          vx: mode==="explode"?(rand(-1,1)*(x-w/2)/w)*8:0,
+          vy: mode==="explode"?(rand(-1,1)*(y-h/2)/h)*8: mode==="fall"?rand(1,4):0,
+          color:`rgb(${r},${g},${b})`,
+          alpha: mode==="assemble"?0:1,
+        });
+      }
+    }
+  }
+
+  const start=performance.now();
+  const dur=mode==="assemble"?1200:900;
+
+  function tick(t){
+    ctx.fillStyle="#080808";
+    ctx.fillRect(0,0,w,h);
+
+    // scanlines
+    for(let y=0;y<h;y+=3){
+      ctx.fillStyle="rgba(0,0,0,0.25)";
+      ctx.fillRect(0,y,w,1);
+    }
+
+    const p=Math.min((t-start)/dur,1);
+    let alive=false;
+
+    pixels.forEach((px,i)=>{
+      const delay=(i/pixels.length)*0.3;
+      const lp=Math.max(0,Math.min((p-delay)/0.7,1));
+      const ease=1-Math.pow(1-lp,3);
+
+      if(mode==="assemble"){
+        px.x=lerp(px.x,px.tx,0.06+ease*0.04);
+        px.y=lerp(px.y,px.ty,0.06+ease*0.04);
+        px.alpha=lerp(px.alpha,1,0.04+ease*0.04);
+      } else if(mode==="fall"){
+        px.y+=px.vy;
+        px.alpha=Math.max(0,1-ease*1.5);
+        if(px.y>h+10) return;
+      } else {
+        px.vx*=0.97; px.vy*=0.97;
+        px.x+=px.vx; px.y+=px.vy;
+        px.alpha=Math.max(0,1-ease*1.2);
+      }
+
+      if(px.alpha>0.01){
+        alive=true;
+        ctx.globalAlpha=px.alpha;
+        ctx.fillStyle=px.color;
+        ctx.fillRect(Math.round(px.x),Math.round(px.y),step-1,step-1);
+      }
+    });
+
+    ctx.globalAlpha=1;
+
+    if(p<1||(mode!=="assemble"&&alive)){
+      pixelRAF=requestAnimationFrame(tick);
+    } else if(mode==="assemble"){
+      // hold assembled state, loop after 2s
+      setTimeout(()=>triggerPixelBreak("assemble",null),2000);
+    }
+  }
+  pixelRAF=requestAnimationFrame(tick);
+}
+
+/* ══════════════════════════
+   5. SCANLINES / MATRIX / HOLOGRAM
+══════════════════════════ */
+let scanRAF, scanMode=0;
+
+function initScan(){
+  cancelAnimationFrame(scanRAF);
+  const{canvas,ctx,w,h}=setupCanvas("c-scanlines");
+  let mouseX=w/2, mouseY=h/2;
+
+  canvas.addEventListener("mousemove",e=>{const r=canvas.getBoundingClientRect();mouseX=e.clientX-r.left;mouseY=e.clientY-r.top;});
+  canvas.addEventListener("touchmove",e=>{const r=canvas.getBoundingClientRect();mouseX=e.touches[0].clientX-r.left;mouseY=e.touches[0].clientY-r.top;e.preventDefault();},{passive:false});
+
+  // Matrix rain
+  const cols=Math.floor(w/14);
+  const matrixDrops=Array.from({length:cols},()=>Math.floor(rand(0,h/14)));
+  const matrixChars="アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン0123456789ABCDEF";
+
+  // Hologram lines
+  const holoLines=Array.from({length:8},(_,i)=>({
+    y:h*0.15+i*(h*0.7/7),
+    speed:rand(0.3,0.8)*(Math.random()>0.5?1:-1),
+    alpha:rand(0.3,0.7),
+    width:rand(0.5,2),
+  }));
+
+  function tick(t){
+    if(scanMode===0){
+      // CRT
+      ctx.fillStyle="rgba(0,8,0,0.25)";
+      ctx.fillRect(0,0,w,h);
+
+      // content
+      const fs=Math.min(w*0.08,32);
+      ctx.font=`bold ${fs}px 'Courier New'`;
+      ctx.textAlign="center";
+      ctx.textBaseline="middle";
+      ctx.fillStyle="#00ff44";
+      ctx.shadowColor="#00ff44";
+      ctx.shadowBlur=10;
+      ctx.fillText("> SYSTEM ONLINE",w/2,h*0.35);
+      ctx.font=`${fs*0.6}px 'Courier New'`;
+      ctx.fillStyle="#00cc33";
+      ctx.shadowBlur=6;
+      ctx.fillText("> LOADING BACH ESENCE...",w/2,h*0.5);
+      ctx.fillText(`> STATUS: ${Math.floor(((t/50)%100)).toString().padStart(3,"0")}%`,w/2,h*0.62);
+      ctx.shadowBlur=0;
+
+      // phosphor glow spot at mouse
+      const pg=ctx.createRadialGradient(mouseX,mouseY,0,mouseX,mouseY,80);
+      pg.addColorStop(0,"rgba(0,255,68,0.06)");
+      pg.addColorStop(1,"transparent");
+      ctx.fillStyle=pg;
+      ctx.fillRect(0,0,w,h);
+
+      // scanlines
+      for(let y=0;y<h;y+=2){
+        ctx.fillStyle="rgba(0,0,0,0.4)";
+        ctx.fillRect(0,y,w,1);
+      }
+      // moving scan beam
+      const beamY=(t/20)%h;
+      ctx.fillStyle="rgba(0,255,68,0.03)";
+      ctx.fillRect(0,beamY,w,4);
+
+    } else if(scanMode===1){
+      // MATRIX
+      ctx.fillStyle="rgba(0,0,0,0.08)";
+      ctx.fillRect(0,0,w,h);
+
+      ctx.font=`bold 12px 'Courier New'`;
+      ctx.textAlign="left";
+      matrixDrops.forEach((drop,i)=>{
+        const char=matrixChars[Math.floor(rand(0,matrixChars.length))];
+        const x=i*14;
+        // bright head
+        ctx.fillStyle="#ffffff";
+        ctx.shadowColor="#00ff44";
+        ctx.shadowBlur=8;
+        ctx.fillText(char,x,drop*14);
+        // trail
+        ctx.fillStyle="#00ff44";
+        ctx.shadowBlur=3;
+        ctx.fillText(matrixChars[Math.floor(rand(0,matrixChars.length))],x,(drop-1)*14);
+        ctx.shadowBlur=0;
+        ctx.fillStyle="rgba(0,200,50,0.4)";
+        ctx.fillText(matrixChars[Math.floor(rand(0,matrixChars.length))],x,(drop-2)*14);
+
+        if(drop*14>h&&Math.random()>0.975) matrixDrops[i]=0;
+        else matrixDrops[i]++;
+      });
+
+    } else {
+      // HOLOGRAM
+      ctx.fillStyle="rgba(0,4,12,0.3)";
+      ctx.fillRect(0,0,w,h);
+
+      // central figure
+      ctx.strokeStyle="rgba(100,200,255,0.6)";
+      ctx.lineWidth=1;
+      ctx.shadowColor="#7EC8E3";
+      ctx.shadowBlur=8;
+      // hexagon grid
+      const hexR=20;
+      for(let row=-2;row<h/hexR+2;row++){
+        for(let col=-1;col<w/(hexR*1.73)+2;col++){
+          const hx=col*hexR*1.73+(row%2)*hexR*0.87;
+          const hy=row*hexR*1.5;
+          const distX=hx-mouseX, distY=hy-mouseY;
+          const dist=Math.sqrt(distX*distX+distY*distY);
+          const alpha=Math.max(0,0.15-dist/300);
+          if(alpha<0.01) continue;
+          ctx.globalAlpha=alpha+Math.sin(t/1000+dist/50)*0.05;
+          ctx.beginPath();
+          for(let i=0;i<6;i++){
+            const a=i/6*Math.PI*2;
+            i===0?ctx.moveTo(hx+Math.cos(a)*hexR*0.9,hy+Math.sin(a)*hexR*0.9)
+                 :ctx.lineTo(hx+Math.cos(a)*hexR*0.9,hy+Math.sin(a)*hexR*0.9);
+          }
+          ctx.closePath(); ctx.stroke();
+        }
+      }
+      ctx.globalAlpha=1;
+
+      // hologram text
+      ctx.font=`bold ${Math.min(w*0.1,40)}px 'Courier New'`;
+      ctx.textAlign="center";
+      ctx.textBaseline="middle";
+      ctx.shadowBlur=20;
+      holoLines.forEach(l=>{
+        l.y+=l.speed*0.3;
+        if(l.y<0||l.y>h) l.speed*=-1;
+      });
+
+      // horizontal scan distortion
+      holoLines.forEach(l=>{
+        ctx.fillStyle=`rgba(100,200,255,${l.alpha*0.3})`;
+        ctx.fillRect(0,l.y,w,l.width);
+      });
+
+      ctx.fillStyle="rgba(150,220,255,0.9)";
+      ctx.fillText("HOLOGRAM",w/2,h/2);
+      ctx.font=`${Math.min(w*0.05,20)}px 'Courier New'`;
+      ctx.fillStyle="rgba(100,200,255,0.5)";
+      ctx.fillText("POHYBUJ PRSTEM",w/2,h/2+50);
+      ctx.shadowBlur=0;
+    }
+
+    scanRAF=requestAnimationFrame(tick);
+  }
+  scanRAF=requestAnimationFrame(tick);
+}
+function setScanMode(m,btn){
+  scanMode=m;
+  document.querySelectorAll("#panel-scanlines .ctrl-btn").forEach(b=>b.classList.remove("active-ctrl"));
+  btn.classList.add("active-ctrl");
+  initScan();
+}
+
+/* ══ TABS ══ */
+const inits={glitchtext:initGlitchText,rgbsplit:initRGB,vhs:initVHS,pixelbreak:initPixelBreak,scanlines:initScan};
+
+function showPanel(name,btn){
+  cancelAnimationFrame(glitchRAF);cancelAnimationFrame(rgbRAF);
+  cancelAnimationFrame(vhsRAF);cancelAnimationFrame(pixelRAF);cancelAnimationFrame(scanRAF);
+  document.querySelectorAll(".panel").forEach(p=>p.classList.remove("active"));
+  document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
+  document.getElementById("panel-"+name).classList.add("active");
+  if(btn) btn.classList.add("active");
+  setTimeout(()=>inits[name]?.(),50);
+}
+
+setTimeout(initGlitchText,200);
+</script>
+</body>
+</html>

@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Motion — Příroda</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    min-height: 100vh;
+    background: #080d14;
+    font-family: -apple-system, system-ui, sans-serif;
+    color: #f0f4ff;
+    padding: 20px 14px 40px;
+    overflow-x: hidden;
+  }
+  .header {
+    text-align: center; margin-bottom: 24px;
+    animation: fadeIn 0.6s ease both;
+  }
+  .header .label { font-size: 10px; letter-spacing: 6px; color: #34d399; text-transform: uppercase; margin-bottom: 8px; }
+  .header h1 {
+    font-size: 22px; font-weight: 800;
+    background: linear-gradient(90deg, #34d399, #7EC8E3, #a78bfa);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+
+  .tabs {
+    display: flex; gap: 8px; overflow-x: auto;
+    padding-bottom: 4px; margin-bottom: 24px; scrollbar-width: none;
+  }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab {
+    flex-shrink: 0; padding: 8px 14px; border-radius: 20px;
+    border: none; cursor: pointer; font-size: 12px; font-weight: 600;
+    background: rgba(255,255,255,0.07); color: #8892b0;
+    transition: all 0.22s; -webkit-tap-highlight-color: transparent;
+  }
+  .tab.active { background: linear-gradient(90deg, #34d399, #7EC8E3); color: #0a0f1e; }
+
+  .panel { display: none; max-width: 480px; margin: 0 auto; }
+  .panel.active { display: block; animation: fadeIn 0.3s ease both; }
+  .hint { text-align: center; color: #8892b0; font-size: 13px; margin-bottom: 16px; }
+  .tip  { text-align: center; font-size: 11px; color: #2a3a2a; margin-top: 14px; }
+
+  .canvas-wrap { border-radius: 16px; overflow: hidden; position: relative; }
+  canvas { display: block; width: 100%; }
+
+  .ctrl-row { display: flex; gap: 8px; margin-top: 12px; justify-content: center; flex-wrap: wrap; }
+  .ctrl-btn {
+    padding: 8px 16px; border-radius: 20px;
+    border: 1px solid rgba(52,211,153,0.2); background: transparent;
+    color: #4a5568; font-size: 11px; letter-spacing: 1px;
+    text-transform: uppercase; cursor: pointer;
+    transition: all 0.2s; -webkit-tap-highlight-color: transparent;
+  }
+  .ctrl-btn:active, .ctrl-btn.active-ctrl { border-color: #34d399; color: #34d399; }
+
+  @keyframes fadeIn { from{opacity:0}to{opacity:1} }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="label">Motion · Příroda</div>
+  <h1>🌿 NATURE & ORGANIC</h1>
+</div>
+
+<div class="tabs">
+  <button class="tab active" onclick="showPanel('rain',this)">🌧 Déšť</button>
+  <button class="tab" onclick="showPanel('snow',this)">❄️ Sníh</button>
+  <button class="tab" onclick="showPanel('fire',this)">🔥 Oheň</button>
+  <button class="tab" onclick="showPanel('leaves',this)">🍂 Listí</button>
+  <button class="tab" onclick="showPanel('wind',this)">🌊 Vítr</button>
+</div>
+
+<!-- 1. DÉŠŤ -->
+<div id="panel-rain" class="panel active">
+  <p class="hint">Klepni — vytvoř bouřku</p>
+  <div class="canvas-wrap"><canvas id="c-rain" height="320"></canvas></div>
+  <div class="ctrl-row">
+    <button class="ctrl-btn active-ctrl" onclick="setRain(80,'light',this)">Mrholení</button>
+    <button class="ctrl-btn" onclick="setRain(200,'medium',this)">Déšť</button>
+    <button class="ctrl-btn" onclick="setRain(400,'heavy',this)">Bouřka</button>
+  </div>
+  <p class="tip">→ Atmosférické pozadí, mood vizuál, ambient animace</p>
+</div>
+
+<!-- 2. SNÍH -->
+<div id="panel-snow" class="panel">
+  <p class="hint">Pohybuj prstem — sníh fouká za tebou</p>
+  <div class="canvas-wrap"><canvas id="c-snow" height="320"></canvas></div>
+  <div class="ctrl-row">
+    <button class="ctrl-btn active-ctrl" onclick="setSnow(60,this)">Vločky</button>
+    <button class="ctrl-btn" onclick="setSnow(150,this)">Sněžení</button>
+    <button class="ctrl-btn" onclick="setSnow(300,this)">Vánice</button>
+  </div>
+  <p class="tip">→ Zimní kampaň, vánoční landing page, sezónní téma</p>
+</div>
+
+<!-- 3. OHEŇ -->
+<div id="panel-fire" class="panel">
+  <p class="hint">Klepni — přidej palivo do ohně</p>
+  <div class="canvas-wrap"><canvas id="c-fire" height="320"></canvas></div>
+  <div class="ctrl-row">
+    <button class="ctrl-btn active-ctrl" onclick="setFireMode(0,this)">Svíčka</button>
+    <button class="ctrl-btn" onclick="setFireMode(1,this)">Táborák</button>
+    <button class="ctrl-btn" onclick="setFireMode(2,this)">Inferno</button>
+  </div>
+  <p class="tip">→ Mystická Apatyka vizuál, energie, síla, transformace 🌿</p>
+</div>
+
+<!-- 4. LISTÍ -->
+<div id="panel-leaves" class="panel">
+  <p class="hint">Pohybuj prstem — listy letí za tebou</p>
+  <div class="canvas-wrap"><canvas id="c-leaves" height="320"></canvas></div>
+  <div class="ctrl-row">
+    <button class="ctrl-btn active-ctrl" onclick="setLeafSeason(0,this)">Podzim 🍂</button>
+    <button class="ctrl-btn" onclick="setLeafSeason(1,this)">Jaro 🌸</button>
+    <button class="ctrl-btn" onclick="setLeafSeason(2,this)">Magická 🌿</button>
+  </div>
+  <p class="tip">→ Bachovy esence — padající lístečky jako v tvém screenshotu!</p>
+</div>
+
+<!-- 5. VÍTR / TRÁVA -->
+<div id="panel-wind" class="panel">
+  <p class="hint">Pohybuj prstem — vítr fouká travou</p>
+  <div class="canvas-wrap"><canvas id="c-wind" height="320"></canvas></div>
+  <div class="ctrl-row">
+    <button class="ctrl-btn active-ctrl" onclick="setWindMode(0,this)">Tráva</button>
+    <button class="ctrl-btn" onclick="setWindMode(1,this)">Vlny vody</button>
+    <button class="ctrl-btn" onclick="setWindMode(2,this)">Hedvábí</button>
+  </div>
+  <p class="tip">→ Přirozený ambient, meditativní vizuál, wellness appky</p>
+</div>
+
+<script>
+function lerp(a,b,t){return a+(b-a)*t}
+function rand(min,max){return min+Math.random()*(max-min)}
+
+function setupCanvas(id){
+  const canvas=document.getElementById(id);
+  const dpr=window.devicePixelRatio||1;
+  const rect=canvas.parentElement.getBoundingClientRect();
+  canvas.width=rect.width*dpr;
+  canvas.height=320*dpr;
+  canvas.style.width=rect.width+"px";
+  canvas.style.height="320px";
+  const ctx=canvas.getContext("2d");
+  ctx.scale(dpr,dpr);
+  return{canvas,ctx,w:rect.width,h:320};
+}
+
+/* ══════════════════ DÉŠŤ ══════════════════ */
+let rainRAF, rainCount=80, rainMode="light";
+function initRain(){
+  cancelAnimationFrame(rainRAF);
+  const{canvas,ctx,w,h}=setupCanvas("c-rain");
+  let drops=makeDrops(rainCount,w,h);
+  let lightning=null;
+  let mouseX=-1;
+
+  function makeDrops(n,w,h){
+    return Array.from({length:n},()=>({
+      x:rand(0,w), y:rand(-h,0),
+      len:rand(10,25), speed:rand(8,16),
+      alpha:rand(0.3,0.8), width:rand(0.5,1.5),
+    }));
+  }
+
+  canvas.addEventListener("click",e=>{
+    if(rainMode==="heavy"){
+      lightning={t:performance.now(), x:e.clientX-canvas.getBoundingClientRect().left};
+    }
+    drops.push(...makeDrops(40,w,h));
+  });
+  canvas.addEventListener("touchstart",e=>{
+    if(rainMode==="heavy"){lightning={t:performance.now(),x:e.touches[0].clientX-canvas.getBoundingClientRect().left};}
+    drops.push(...makeDrops(20,w,h));
+    e.preventDefault();
+  },{passive:false});
+  canvas.addEventListener("mousemove",e=>{mouseX=e.clientX-canvas.getBoundingClientRect().left;});
+  canvas.addEventListener("mouseleave",()=>{mouseX=-1;});
+
+  function tick(){
+    // sky bg
+    const skyGrad=ctx.createLinearGradient(0,0,0,h);
+    if(rainMode==="heavy"){
+      skyGrad.addColorStop(0,"#0a0d14");
+      skyGrad.addColorStop(1,"#111827");
+    } else {
+      skyGrad.addColorStop(0,"#0f1923");
+      skyGrad.addColorStop(1,"#1a2a3a");
+    }
+    ctx.fillStyle=skyGrad;
+    ctx.fillRect(0,0,w,h);
+
+    // lightning
+    if(lightning){
+      const age=(performance.now()-lightning.t)/1000;
+      if(age<0.12){
+        ctx.fillStyle=`rgba(200,220,255,${(0.12-age)/0.12*0.4})`;
+        ctx.fillRect(0,0,w,h);
+        // bolt
+        ctx.strokeStyle=`rgba(200,220,255,${(0.12-age)/0.12*0.9})`;
+        ctx.lineWidth=2;
+        ctx.beginPath();
+        let lx=lightning.x, ly=0;
+        ctx.moveTo(lx,ly);
+        while(ly<h*0.7){
+          lx+=rand(-30,30); ly+=rand(20,50);
+          ctx.lineTo(lx,ly);
+        }
+        ctx.stroke();
+      } else lightning=null;
+    }
+
+    // puddles at bottom
+    ctx.fillStyle="rgba(100,150,200,0.06)";
+    ctx.fillRect(0,h-8,w,8);
+
+    // drops
+    const wind=mouseX>0?(mouseX-w/2)*0.02:0;
+    drops.forEach(d=>{
+      d.y+=d.speed;
+      d.x+=wind;
+      if(d.y>h){
+        d.y=rand(-50,0);
+        d.x=rand(0,w);
+        // splash
+        ctx.beginPath();
+        ctx.ellipse(d.x,h-4,rand(3,8),2,0,0,Math.PI*2);
+        ctx.strokeStyle=`rgba(150,200,255,${d.alpha*0.5})`;
+        ctx.lineWidth=0.5;
+        ctx.stroke();
+      }
+      if(d.x<0) d.x=w;
+      if(d.x>w) d.x=0;
+
+      ctx.beginPath();
+      ctx.moveTo(d.x,d.y);
+      ctx.lineTo(d.x+wind*2,d.y+d.len);
+      ctx.strokeStyle=`rgba(170,210,255,${d.alpha})`;
+      ctx.lineWidth=d.width;
+      ctx.stroke();
+    });
+
+    // ground reflection
+    const refGrad=ctx.createLinearGradient(0,h-20,0,h);
+    refGrad.addColorStop(0,"rgba(100,150,200,0)");
+    refGrad.addColorStop(1,"rgba(100,150,200,0.08)");
+    ctx.fillStyle=refGrad;
+    ctx.fillRect(0,h-20,w,20);
+
+    rainRAF=requestAnimationFrame(tick);
+  }
+  rainRAF=requestAnimationFrame(tick);
+}
+
+function setRain(n,mode,btn){
+  rainCount=n; rainMode=mode;
+  document.querySelectorAll("#panel-rain .ctrl-btn").forEach(b=>b.classList.remove("active-ctrl"));
+  btn.classList.add("active-ctrl");
+  initRain();
+}
+
+/* ══════════════════ SNÍH ══════════════════ */
+let snowRAF, snowCount=60;
+function initSnow(){
+  cancelAnimationFrame(snowRAF);
+  const{canvas,ctx,w,h}=setupCanvas("c-snow");
+  let mouseX=w/2, mouseY=-1;
+
+  const flakes=Array.from({length:snowCount},()=>({
+    x:rand(0,w), y:rand(-h,0),
+    r:rand(1.5,5), speed:rand(0.8,2.5),
+    wobble:rand(0,Math.PI*2), wobbleSpeed:rand(0.01,0.04),
+    alpha:rand(0.4,0.95),
+  }));
+
+  canvas.addEventListener("mousemove",e=>{const r=canvas.getBoundingClientRect();mouseX=e.clientX-r.left;mouseY=e.clientY-r.top;});
+  canvas.addEventListener("touchmove",e=>{const r=canvas.getBoundingClientRect();mouseX=e.touches[0].clientX-r.left;mouseY=e.touches[0].clientY-r.top;e.preventDefault();},{passive:false});
+
+  function tick(){
+    const skyG=ctx.createLinearGradient(0,0,0,h);
+    skyG.addColorStop(0,"#0d1520");
+    skyG.addColorStop(1,"#1a2535");
+    ctx.fillStyle=skyG;
+    ctx.fillRect(0,0,w,h);
+
+    // snow ground
+    ctx.fillStyle="rgba(200,220,255,0.06)";
+    ctx.fillRect(0,h-12,w,12);
+
+    flakes.forEach(f=>{
+      f.wobble+=f.wobbleSpeed;
+      const windX=mouseX>0?(mouseX-w/2)*0.008:0;
+      f.x+=Math.sin(f.wobble)*1.2+windX;
+      f.y+=f.speed;
+
+      if(f.y>h){ f.y=-f.r*2; f.x=rand(0,w); }
+      if(f.x<0) f.x=w;
+      if(f.x>w) f.x=0;
+
+      // mouse repel
+      if(mouseY>0){
+        const dx=f.x-mouseX, dy=f.y-mouseY;
+        const dist=Math.sqrt(dx*dx+dy*dy);
+        if(dist<60){ f.x+=dx/dist*1.5; f.y+=dy/dist*0.8; }
+      }
+
+      // snowflake shape for larger ones
+      if(f.r>3){
+        ctx.save();
+        ctx.translate(f.x,f.y);
+        ctx.strokeStyle=`rgba(200,230,255,${f.alpha})`;
+        ctx.lineWidth=0.8;
+        for(let i=0;i<6;i++){
+          ctx.save();
+          ctx.rotate(i*Math.PI/3);
+          ctx.beginPath();
+          ctx.moveTo(0,0); ctx.lineTo(0,f.r*2);
+          ctx.moveTo(0,f.r); ctx.lineTo(f.r*0.5,f.r*0.5);
+          ctx.moveTo(0,f.r); ctx.lineTo(-f.r*0.5,f.r*0.5);
+          ctx.stroke();
+          ctx.restore();
+        }
+        ctx.restore();
+      } else {
+        ctx.beginPath();
+        ctx.arc(f.x,f.y,f.r,0,Math.PI*2);
+        ctx.fillStyle=`rgba(200,230,255,${f.alpha})`;
+        ctx.fill();
+      }
+    });
+
+    snowRAF=requestAnimationFrame(tick);
+  }
+  snowRAF=requestAnimationFrame(tick);
+}
+function setSnow(n,btn){
+  snowCount=n;
+  document.querySelectorAll("#panel-snow .ctrl-btn").forEach(b=>b.classList.remove("active-ctrl"));
+  btn.classList.add("active-ctrl");
+  initSnow();
+}
+
+/* ══════════════════ OHEŇ ══════════════════ */
+let fireRAF, fireMode=0;
+function initFire(){
+  cancelAnimationFrame(fireRAF);
+  const{canvas,ctx,w,h}=setupCanvas("c-fire");
+  let particles=[];
+  let mouseX=w/2, clicking=false;
+
+  const modes=[
+    {cx:w/2, baseW:30, n:3, colors:["#ff6b00","#ff9500","#ffcc00","#fff5e0"]},
+    {cx:w/2, baseW:80, n:8, colors:["#ff3d00","#ff6b00","#ff9500","#ffcc00","#fff"]},
+    {cx:w/2, baseW:w*0.6, n:20, colors:["#ff0000","#ff3d00","#ff6b00","#ff9500","#ffcc00","#fff"]},
+  ];
+
+  canvas.addEventListener("mousemove",e=>{mouseX=e.clientX-canvas.getBoundingClientRect().left;});
+  canvas.addEventListener("touchmove",e=>{mouseX=e.touches[0].clientX-canvas.getBoundingClientRect().left;e.preventDefault();},{passive:false});
+  canvas.addEventListener("mousedown",()=>clicking=true);
+  canvas.addEventListener("mouseup",()=>clicking=false);
+  canvas.addEventListener("touchstart",()=>clicking=true,{passive:true});
+  canvas.addEventListener("touchend",()=>clicking=false);
+
+  function spawnParticle(m){
+    const x=m.cx+(rand(-1,1)*m.baseW/2);
+    const speedMult=clicking?1.8:1;
+    return{
+      x, y:h-20,
+      vx:rand(-0.8,0.8)*(fireMode===2?1.5:1),
+      vy:-(rand(1.5,4)*speedMult+fireMode*0.8),
+      life:1, decay:rand(0.012,0.025)/(fireMode===0?0.6:1),
+      size:rand(4,12+fireMode*8),
+      color:m.colors[Math.floor(rand(0,m.colors.length))],
+      wobble:rand(0,Math.PI*2),
+    };
+  }
+
+  function tick(t){
+    // dark bg
+    ctx.fillStyle="rgba(8,8,16,0.35)";
+    ctx.fillRect(0,0,w,h);
+
+    const m=modes[fireMode];
+    m.cx=lerp(m.cx,mouseX,0.05);
+
+    // spawn
+    for(let i=0;i<m.n*(clicking?3:1);i++) particles.push(spawnParticle(m));
+    particles=particles.filter(p=>p.life>0);
+
+    // embers at base
+    ctx.globalCompositeOperation="screen";
+    const baseGrad=ctx.createRadialGradient(m.cx,h,0,m.cx,h,m.baseW*0.8);
+    baseGrad.addColorStop(0,"rgba(255,120,0,0.4)");
+    baseGrad.addColorStop(0.5,"rgba(255,60,0,0.15)");
+    baseGrad.addColorStop(1,"transparent");
+    ctx.fillStyle=baseGrad;
+    ctx.fillRect(0,0,w,h);
+
+    particles.forEach(p=>{
+      p.wobble+=0.08;
+      p.vx+=Math.sin(p.wobble)*0.15;
+      p.vy-=0.05;
+      p.x+=p.vx; p.y+=p.vy;
+      p.life-=p.decay;
+      p.size*=0.985;
+
+      const alpha=p.life;
+      // outer glow
+      const g=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,p.size*1.5);
+      g.addColorStop(0,p.color+"cc");
+      g.addColorStop(0.4,p.color+"44");
+      g.addColorStop(1,"transparent");
+      ctx.fillStyle=g;
+      ctx.globalAlpha=alpha*0.6;
+      ctx.beginPath();
+      ctx.arc(p.x,p.y,p.size*1.5,0,Math.PI*2);
+      ctx.fill();
+
+      // core
+      ctx.globalAlpha=alpha;
+      ctx.fillStyle=p.color;
+      ctx.beginPath();
+      ctx.arc(p.x,p.y,p.size*0.4,0,Math.PI*2);
+      ctx.fill();
+    });
+
+    ctx.globalAlpha=1;
+    ctx.globalCompositeOperation="source-over";
+
+    // ground glow
+    const gg=ctx.createLinearGradient(0,h-30,0,h);
+    gg.addColorStop(0,"rgba(255,80,0,0.15)");
+    gg.addColorStop(1,"rgba(255,40,0,0.05)");
+    ctx.fillStyle=gg;
+    ctx.fillRect(0,h-30,w,30);
+
+    fireRAF=requestAnimationFrame(tick);
+  }
+  fireRAF=requestAnimationFrame(tick);
+}
+function setFireMode(m,btn){
+  fireMode=m;
+  document.querySelectorAll("#panel-fire .ctrl-btn").forEach(b=>b.classList.remove("active-ctrl"));
+  btn.classList.add("active-ctrl");
+  initFire();
+}
+
+/* ══════════════════ LISTÍ ══════════════════ */
+let leavesRAF, leafSeason=0;
+const leafSeasons=[
+  {colors:["#b45309","#d97706","#ef4444","#f97316","#fbbf24","#92400e"], bg:["#0d1008","#1a1a08"]},
+  {colors:["#fce7f3","#fbcfe8","#f9a8d4","#ffffff","#fef3c7","#d1fae5"], bg:["#0d0818","#100d20"]},
+  {colors:["#34d399","#10b981","#6ee7b7","#a78bfa","#7EC8E3","#d1fae5"], bg:["#020d08","#050f14"]},
+];
+
+function initLeaves(){
+  cancelAnimationFrame(leavesRAF);
+  const{canvas,ctx,w,h}=setupCanvas("c-leaves");
+  let mouseX=w/2, mouseY=-1;
+
+  const leaves=Array.from({length:35},(_,i)=>({
+    x:rand(0,w), y:rand(-h,h*0.5),
+    vx:rand(-0.5,0.5), vy:rand(0.5,2),
+    rotation:rand(0,360), rotSpeed:rand(-2,2),
+    size:rand(8,22), alpha:rand(0.6,1),
+    wobble:rand(0,Math.PI*2), wobbleSpeed:rand(0.02,0.05),
+    colorIdx:Math.floor(rand(0,6)),
+    shape:Math.floor(rand(0,3)),
+  }));
+
+  canvas.addEventListener("mousemove",e=>{const r=canvas.getBoundingClientRect();mouseX=e.clientX-r.left;mouseY=e.clientY-r.top;});
+  canvas.addEventListener("touchmove",e=>{const r=canvas.getBoundingClientRect();mouseX=e.touches[0].clientX-r.left;mouseY=e.touches[0].clientY-r.top;e.preventDefault();},{passive:false});
+
+  function drawLeaf(ctx,size,shape,color){
+    ctx.fillStyle=color;
+    ctx.strokeStyle=color+"88";
+    ctx.lineWidth=0.5;
+    if(shape===0){
+      // oval leaf
+      ctx.beginPath();
+      ctx.ellipse(0,0,size*0.4,size*0.7,0,0,Math.PI*2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(0,-size*0.7); ctx.lineTo(0,size*0.7);
+      ctx.stroke();
+    } else if(shape===1){
+      // maple-ish
+      ctx.beginPath();
+      for(let i=0;i<5;i++){
+        const a=i/5*Math.PI*2-Math.PI/2;
+        const r=i%2===0?size*0.7:size*0.35;
+        i===0?ctx.moveTo(Math.cos(a)*r,Math.sin(a)*r):ctx.lineTo(Math.cos(a)*r,Math.sin(a)*r);
+      }
+      ctx.closePath(); ctx.fill();
+    } else {
+      // petal/sakura
+      ctx.beginPath();
+      ctx.ellipse(0,-size*0.3,size*0.25,size*0.5,0,0,Math.PI*2);
+      ctx.fill();
+    }
+  }
+
+  function tick(){
+    const season=leafSeasons[leafSeason];
+    const bgG=ctx.createLinearGradient(0,0,0,h);
+    bgG.addColorStop(0,season.bg[0]);
+    bgG.addColorStop(1,season.bg[1]);
+    ctx.fillStyle=bgG;
+    ctx.fillRect(0,0,w,h);
+
+    leaves.forEach(l=>{
+      l.wobble+=l.wobbleSpeed;
+      const windX=mouseX?(mouseX-w/2)*0.015:0;
+      l.vx=lerp(l.vx,windX+Math.sin(l.wobble)*0.6,0.05);
+      l.x+=l.vx;
+      l.y+=l.vy+Math.sin(l.wobble*0.5)*0.3;
+      l.rotation+=l.rotSpeed*(1+Math.abs(l.vx)*0.2);
+
+      // mouse attraction
+      if(mouseY>0){
+        const dx=mouseX-l.x, dy=mouseY-l.y;
+        const dist=Math.sqrt(dx*dx+dy*dy);
+        if(dist<80){ l.vx+=dx/dist*0.2; l.vy+=dy/dist*0.1; }
+      }
+
+      if(l.y>h+l.size){ l.y=-l.size; l.x=rand(0,w); }
+      if(l.x<-l.size) l.x=w+l.size;
+      if(l.x>w+l.size) l.x=-l.size;
+
+      ctx.save();
+      ctx.translate(l.x,l.y);
+      ctx.rotate(l.rotation*Math.PI/180);
+      ctx.globalAlpha=l.alpha;
+      drawLeaf(ctx,l.size,l.shape,season.colors[l.colorIdx%season.colors.length]);
+      ctx.restore();
+    });
+
+    ctx.globalAlpha=1;
+    leavesRAF=requestAnimationFrame(tick);
+  }
+  leavesRAF=requestAnimationFrame(tick);
+}
+function setLeafSeason(s,btn){
+  leafSeason=s;
+  document.querySelectorAll("#panel-leaves .ctrl-btn").forEach(b=>b.classList.remove("active-ctrl"));
+  btn.classList.add("active-ctrl");
+  initLeaves();
+}
+
+/* ══════════════════ VÍTR ══════════════════ */
+let windRAF, windMode=0;
+function initWind(){
+  cancelAnimationFrame(windRAF);
+  const{canvas,ctx,w,h}=setupCanvas("c-wind");
+  let mouseX=w/2, mouseY=h/2;
+
+  canvas.addEventListener("mousemove",e=>{const r=canvas.getBoundingClientRect();mouseX=e.clientX-r.left;mouseY=e.clientY-r.top;});
+  canvas.addEventListener("touchmove",e=>{const r=canvas.getBoundingClientRect();mouseX=e.touches[0].clientX-r.left;mouseY=e.touches[0].clientY-r.top;e.preventDefault();},{passive:false});
+
+  // GRASS
+  const blades=Array.from({length:60},(_,i)=>({
+    x:(i/60)*w+rand(-4,4),
+    baseH:rand(30,70),
+    segments:6,
+    phase:rand(0,Math.PI*2),
+    width:rand(2,5),
+    color:`hsl(${rand(110,140)},${rand(40,70)}%,${rand(20,35)}%)`,
+    colorTip:`hsl(${rand(90,130)},${rand(50,80)}%,${rand(35,55)}%)`,
+  }));
+
+  // WATER LINES
+  const wLines=Array.from({length:20},(_,i)=>({
+    y:h*0.1+i*(h*0.85/20),
+    phase:rand(0,Math.PI*2),
+    amp:rand(3,12),
+    speed:rand(0.005,0.015),
+    alpha:rand(0.1,0.35),
+  }));
+
+  // SILK threads
+  const threads=Array.from({length:12},(_,i)=>({
+    x:(i/12)*w+w/24,
+    phase:rand(0,Math.PI*2),
+    len:rand(80,180),
+    alpha:rand(0.3,0.7),
+    color:`hsla(${rand(200,280)},60%,70%,1)`,
+  }));
+
+  function tick(t){
+    const time=t/1000;
+    const windStrength=(mouseX-w/2)/w;
+
+    if(windMode===0){
+      // GRASS
+      const bgG=ctx.createLinearGradient(0,0,0,h);
+      bgG.addColorStop(0,"#050e08");
+      bgG.addColorStop(0.6,"#071208");
+      bgG.addColorStop(1,"#0a1a0a");
+      ctx.fillStyle=bgG;
+      ctx.fillRect(0,0,w,h);
+
+      // ground
+      ctx.fillStyle="#0d1f0d";
+      ctx.fillRect(0,h-15,w,15);
+
+      blades.forEach(b=>{
+        const windEffect=(mouseX-b.x)/w*2+windStrength;
+        const sway=Math.sin(time*2+b.phase)*0.4+windEffect*0.6;
+        ctx.beginPath();
+        let bx=b.x, by=h-12;
+        ctx.moveTo(bx,by);
+        for(let s=0;s<b.segments;s++){
+          const prog=(s+1)/b.segments;
+          const bend=sway*prog*prog*b.baseH*0.5;
+          const nx=bx+bend*0.15, ny=by-b.baseH/b.segments;
+          ctx.lineTo(nx+bend*prog,ny);
+          bx=nx+bend*prog; by=ny;
+        }
+        const grad=ctx.createLinearGradient(b.x,h,bx,by);
+        grad.addColorStop(0,b.color);
+        grad.addColorStop(1,b.colorTip);
+        ctx.strokeStyle=grad;
+        ctx.lineWidth=b.width*(1-0.5*(b.segments-1)/b.segments);
+        ctx.lineCap="round";
+        ctx.stroke();
+      });
+
+    } else if(windMode===1){
+      // WATER
+      const bgG=ctx.createLinearGradient(0,0,0,h);
+      bgG.addColorStop(0,"#020810");
+      bgG.addColorStop(1,"#050d1a");
+      ctx.fillStyle=bgG;
+      ctx.fillRect(0,0,w,h);
+
+      wLines.forEach(l=>{
+        l.phase+=l.speed+windStrength*0.02;
+        ctx.beginPath();
+        for(let x=0;x<=w;x+=4){
+          const y=l.y+Math.sin(x*0.02+l.phase)*l.amp+Math.sin(x*0.035+l.phase*1.3)*l.amp*0.4;
+          x===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+        }
+        ctx.strokeStyle=`rgba(100,180,255,${l.alpha})`;
+        ctx.lineWidth=0.8;
+        ctx.stroke();
+      });
+
+      // mouse ripple
+      const rg=ctx.createRadialGradient(mouseX,mouseY,0,mouseX,mouseY,60);
+      rg.addColorStop(0,"rgba(150,210,255,0.15)");
+      rg.addColorStop(1,"transparent");
+      ctx.fillStyle=rg;
+      ctx.fillRect(0,0,w,h);
+
+    } else {
+      // SILK
+      ctx.fillStyle="rgba(5,3,12,0.3)";
+      ctx.fillRect(0,0,w,h);
+
+      threads.forEach(th=>{
+        th.phase+=0.01+windStrength*0.02;
+        ctx.beginPath();
+        const pts=12;
+        for(let i=0;i<=pts;i++){
+          const prog=i/pts;
+          const x=th.x+Math.sin(prog*Math.PI*2+th.phase+time*0.5)*40*(1+windStrength)*prog;
+          const y=prog*th.len+Math.cos(prog*Math.PI+th.phase)*20;
+          i===0?ctx.moveTo(x,y*h/th.len+h*0.05):ctx.lineTo(x,y*h/th.len+h*0.05);
+        }
+        ctx.strokeStyle=th.color.replace("1)",`${th.alpha})`);
+        ctx.lineWidth=1.5;
+        ctx.lineCap="round";
+        ctx.stroke();
+
+        // shimmer
+        ctx.strokeStyle=`rgba(255,255,255,${th.alpha*0.3})`;
+        ctx.lineWidth=0.5;
+        ctx.stroke();
+      });
+    }
+
+    windRAF=requestAnimationFrame(tick);
+  }
+  windRAF=requestAnimationFrame(tick);
+}
+function setWindMode(m,btn){
+  windMode=m;
+  document.querySelectorAll("#panel-wind .ctrl-btn").forEach(b=>b.classList.remove("active-ctrl"));
+  btn.classList.add("active-ctrl");
+  initWind();
+}
+
+/* ══ TABS ══ */
+const inits={rain:initRain,snow:initSnow,fire:initFire,leaves:initLeaves,wind:initWind};
+let activeRAFs=[rainRAF,snowRAF,fireRAF,leavesRAF,windRAF];
+
+function showPanel(name,btn){
+  cancelAnimationFrame(rainRAF);cancelAnimationFrame(snowRAF);
+  cancelAnimationFrame(fireRAF);cancelAnimationFrame(leavesRAF);cancelAnimationFrame(windRAF);
+  document.querySelectorAll(".panel").forEach(p=>p.classList.remove("active"));
+  document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
+  document.getElementById("panel-"+name).classList.add("active");
+  if(btn) btn.classList.add("active");
+  setTimeout(()=>inits[name]?.(),50);
+}
+
+setTimeout(initRain,200);
+</script>
+</body>
+</html>

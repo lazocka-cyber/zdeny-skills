@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Motion.dev — Grafy & Statistiky</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #0a0f1e 0%, #0d1b35 100%);
+    font-family: -apple-system, system-ui, sans-serif;
+    color: #f0f4ff;
+    padding: 20px 14px 40px;
+    overflow-x: hidden;
+  }
+
+  .header {
+    text-align: center; margin-bottom: 22px;
+    animation: fadeDown 0.5s ease both;
+  }
+  .header .label {
+    font-size: 11px; letter-spacing: 4px; color: #7EC8E3;
+    text-transform: uppercase; margin-bottom: 6px;
+  }
+  .header h1 {
+    font-size: 22px; font-weight: 800;
+    background: linear-gradient(90deg, #7EC8E3, #fff, #a78bfa);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+
+  .tabs {
+    display: flex; gap: 8px; overflow-x: auto;
+    padding-bottom: 4px; margin-bottom: 22px; scrollbar-width: none;
+  }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab {
+    flex-shrink: 0; padding: 8px 15px; border-radius: 20px;
+    border: none; cursor: pointer; font-size: 12px; font-weight: 600;
+    background: rgba(255,255,255,0.08); color: #8892b0;
+    transition: all 0.22s; -webkit-tap-highlight-color: transparent;
+  }
+  .tab.active { background: linear-gradient(90deg, #7EC8E3, #a78bfa); color: #0a0f1e; }
+
+  .panel { display: none; max-width: 480px; margin: 0 auto; }
+  .panel.active { display: block; animation: fadeIn 0.3s ease both; }
+  .hint { text-align: center; color: #8892b0; font-size: 13px; margin-bottom: 18px; }
+  .tip  { text-align: center; font-size: 11px; color: #4a5568; margin-top: 16px; }
+
+  .replay-btn {
+    display: block; margin: 16px auto 0;
+    padding: 9px 22px; border-radius: 12px; border: none;
+    background: rgba(255,255,255,0.07); color: #8892b0;
+    font-size: 13px; font-weight: 600; cursor: pointer;
+    transition: transform 0.15s; -webkit-tap-highlight-color: transparent;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  .replay-btn:active { transform: scale(0.95); }
+
+  /* ══ 1. BAR CHART ══ */
+  .bar-chart { display: flex; flex-direction: column; gap: 14px; }
+  .bar-row { display: flex; align-items: center; gap: 12px; }
+  .bar-label { font-size: 12px; color: #8892b0; width: 28px; text-align: right; flex-shrink: 0; }
+  .bar-day   { font-size: 11px; color: #4a5568; width: 28px; flex-shrink: 0; }
+  .bar-track {
+    flex: 1; height: 28px; background: rgba(255,255,255,0.05);
+    border-radius: 6px; overflow: hidden; position: relative;
+  }
+  .bar-fill {
+    height: 100%; border-radius: 6px; width: 0%;
+    transition: width 0.9s cubic-bezier(0.4,0,0.2,1);
+    display: flex; align-items: center; padding-left: 10px;
+    font-size: 11px; font-weight: 700; color: rgba(0,0,0,0.7);
+    white-space: nowrap;
+  }
+  .bar-goal-line {
+    position: absolute; top: 0; bottom: 0; width: 2px;
+    background: rgba(255,255,255,0.2);
+  }
+
+  /* ══ 2. SLEEP RING ══ */
+  .ring-wrap {
+    display: flex; flex-direction: column; align-items: center; gap: 20px;
+  }
+  .ring-svg { filter: drop-shadow(0 0 16px rgba(126,200,227,0.3)); }
+  .ring-center {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+  }
+  .ring-num { font-size: 34px; font-weight: 900; color: #7EC8E3; }
+  .ring-sub { font-size: 12px; color: #8892b0; margin-top: 2px; }
+  .ring-pos { position: relative; width: 160px; height: 160px; }
+
+  .ring-legend {
+    display: flex; flex-wrap: wrap; gap: 12px; justify-content: center;
+  }
+  .ring-leg-item {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 12px; color: #8892b0;
+  }
+  .ring-leg-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+  }
+
+  /* ══ 3. LINE CHART ══ */
+  .line-chart-wrap {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(126,200,227,0.1);
+    border-radius: 18px; padding: 20px 16px;
+  }
+  .lc-header {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    margin-bottom: 16px;
+  }
+  .lc-title { font-size: 14px; font-weight: 700; color: #7EC8E3; }
+  .lc-value { font-size: 22px; font-weight: 900; }
+  .lc-change { font-size: 11px; color: #34d399; }
+  .lc-svg-wrap { position: relative; }
+  .lc-labels {
+    display: flex; justify-content: space-between;
+    margin-top: 6px; padding: 0 2px;
+  }
+  .lc-label { font-size: 10px; color: #4a5568; }
+
+  /* ══ 4. RADIAL GAUGES ══ */
+  .gauges-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
+  }
+  .gauge-card {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 18px; padding: 18px 14px;
+    text-align: center;
+  }
+  .gauge-pos { position: relative; width: 100px; height: 100px; margin: 0 auto 10px; }
+  .gauge-num { font-size: 22px; font-weight: 900; }
+  .gauge-label { font-size: 11px; color: #8892b0; margin-top: 3px; }
+
+  /* ══ 5. VRIJHEIDSGETAL ══ */
+  .vrijheid-wrap { display: flex; flex-direction: column; gap: 16px; }
+  .vr-hero {
+    background: linear-gradient(135deg, rgba(126,200,227,0.1), rgba(167,139,250,0.1));
+    border: 1px solid rgba(126,200,227,0.2);
+    border-radius: 20px; padding: 24px; text-align: center;
+  }
+  .vr-num {
+    font-size: 64px; font-weight: 900; line-height: 1;
+    background: linear-gradient(135deg, #7EC8E3, #a78bfa);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .vr-label { font-size: 14px; color: #8892b0; margin-top: 6px; }
+  .vr-sublabel { font-size: 12px; color: #4a5568; margin-top: 4px; }
+
+  .vr-bar-wrap { }
+  .vr-bar-header {
+    display: flex; justify-content: space-between;
+    font-size: 12px; color: #8892b0; margin-bottom: 8px;
+  }
+  .vr-track {
+    height: 14px; background: rgba(255,255,255,0.06);
+    border-radius: 7px; overflow: hidden;
+  }
+  .vr-fill {
+    height: 100%; border-radius: 7px; width: 0%;
+    transition: width 1.4s cubic-bezier(0.4,0,0.2,1);
+  }
+
+  .vr-zones {
+    display: flex; gap: 8px;
+  }
+  .vr-zone {
+    flex: 1; padding: 12px 10px; border-radius: 12px; text-align: center;
+    border: 1px solid rgba(255,255,255,0.07);
+  }
+  .vr-zone-num { font-size: 18px; font-weight: 800; }
+  .vr-zone-label { font-size: 10px; color: #8892b0; margin-top: 3px; }
+
+  @keyframes fadeDown {
+    from { opacity:0; transform:translateY(-16px); }
+    to   { opacity:1; transform:translateY(0); }
+  }
+  @keyframes fadeIn {
+    from { opacity:0; }
+    to   { opacity:1; }
+  }
+  @keyframes dashAnim {
+    to { stroke-dashoffset: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="label">Motion.dev demo</div>
+  <h1>Animované grafy & statistiky</h1>
+</div>
+
+<div class="tabs">
+  <button class="tab active" onclick="showPanel('bars')">📊 Sloupcový</button>
+  <button class="tab" onclick="showPanel('ring')">🌙 Kruhový</button>
+  <button class="tab" onclick="showPanel('line')">📈 Liniový</button>
+  <button class="tab" onclick="showPanel('gauges')">🎯 Ručičky</button>
+  <button class="tab" onclick="showPanel('vrijheid')">🍼 Vrijheidsgetal</button>
+</div>
+
+<!-- 1. BAR CHART — spánek po dnech -->
+<div id="panel-bars" class="panel active">
+  <p class="hint">📊 Délka spánku za poslední týden</p>
+  <div class="bar-chart" id="bar-chart"></div>
+  <button class="replay-btn" onclick="animateBars()">↺ Znovu přehrát</button>
+  <p class="tip">→ Týdenní přehled spánku, krmení, aktivit v RaisingSmall</p>
+</div>
+
+<!-- 2. RING — skladba noci -->
+<div id="panel-ring" class="panel">
+  <p class="hint">🌙 Skladba dnešní noci</p>
+  <div class="ring-wrap">
+    <div class="ring-pos">
+      <svg class="ring-svg" width="160" height="160" viewBox="0 0 160 160">
+        <circle cx="80" cy="80" r="65" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="18"/>
+        <!-- deep sleep -->
+        <circle id="ring-deep" cx="80" cy="80" r="65" fill="none"
+          stroke="#7EC8E3" stroke-width="18" stroke-linecap="round"
+          stroke-dasharray="408" stroke-dashoffset="408"
+          transform="rotate(-90 80 80)"
+          style="transition: stroke-dashoffset 1.2s cubic-bezier(0.4,0,0.2,1)"/>
+        <!-- light sleep -->
+        <circle id="ring-light" cx="80" cy="80" r="65" fill="none"
+          stroke="#a78bfa" stroke-width="18" stroke-linecap="round"
+          stroke-dasharray="408" stroke-dashoffset="408"
+          transform="rotate(-90 80 80)"
+          style="transition: stroke-dashoffset 1.2s cubic-bezier(0.4,0,0.2,1) 0.3s"/>
+        <!-- wake -->
+        <circle id="ring-wake" cx="80" cy="80" r="65" fill="none"
+          stroke="#f87171" stroke-width="18" stroke-linecap="round"
+          stroke-dasharray="408" stroke-dashoffset="408"
+          transform="rotate(-90 80 80)"
+          style="transition: stroke-dashoffset 1.2s cubic-bezier(0.4,0,0.2,1) 0.6s"/>
+      </svg>
+      <div class="ring-center">
+        <div class="ring-num" id="ring-num">0h</div>
+        <div class="ring-sub">celkem</div>
+      </div>
+    </div>
+    <div class="ring-legend">
+      <div class="ring-leg-item"><div class="ring-leg-dot" style="background:#7EC8E3"></div>Hluboký spánek · 3h 20m</div>
+      <div class="ring-leg-item"><div class="ring-leg-dot" style="background:#a78bfa"></div>Lehký spánek · 2h 40m</div>
+      <div class="ring-leg-item"><div class="ring-leg-dot" style="background:#f87171"></div>Probuzení · 23m</div>
+    </div>
+  </div>
+  <button class="replay-btn" onclick="animateRing()">↺ Znovu přehrát</button>
+  <p class="tip">→ Vizualizace skladby noci v RaisingSmall dashboard</p>
+</div>
+
+<!-- 3. LINE CHART — příjmy -->
+<div id="panel-line" class="panel">
+  <p class="hint">📈 Měsíční příjmy z appek (€)</p>
+  <div class="line-chart-wrap">
+    <div class="lc-header">
+      <div>
+        <div class="lc-title">Celkové příjmy</div>
+        <div class="lc-change">↑ +34% vs. minulý měsíc</div>
+      </div>
+      <div style="text-align:right">
+        <div class="lc-value" id="lc-total" style="color:#34d399">€0</div>
+        <div style="font-size:11px;color:#4a5568">červen 2026</div>
+      </div>
+    </div>
+    <div class="lc-svg-wrap">
+      <svg id="line-svg" width="100%" height="120" viewBox="0 0 400 120" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="lineGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#34d399" stop-opacity="0.3"/>
+            <stop offset="100%" stop-color="#34d399" stop-opacity="0"/>
+          </linearGradient>
+          <clipPath id="lineClip">
+            <rect id="line-clip-rect" x="0" y="0" width="0" height="120"/>
+          </clipPath>
+        </defs>
+        <path id="line-area" d="" fill="url(#lineGrad)" clip-path="url(#lineClip)"/>
+        <path id="line-path" d="" fill="none" stroke="#34d399" stroke-width="2.5"
+          stroke-linecap="round" stroke-linejoin="round" clip-path="url(#lineClip)"/>
+        <!-- dots -->
+        <g id="line-dots"></g>
+      </svg>
+    </div>
+    <div class="lc-labels">
+      <span class="lc-label">Led</span><span class="lc-label">Úno</span>
+      <span class="lc-label">Bře</span><span class="lc-label">Dub</span>
+      <span class="lc-label">Kvě</span><span class="lc-label">Čvn</span>
+    </div>
+  </div>
+  <button class="replay-btn" onclick="animateLine()">↺ Znovu přehrát</button>
+  <p class="tip">→ Přehled příjmů, prodeje na Gumroad, růst uživatelů</p>
+</div>
+
+<!-- 4. GAUGES -->
+<div id="panel-gauges" class="panel">
+  <p class="hint">🎯 Denní cíle — klepni na kartu</p>
+  <div class="gauges-grid" id="gauges-grid"></div>
+  <button class="replay-btn" onclick="animateGauges()">↺ Znovu přehrát</button>
+  <p class="tip">→ Cíle spánku, krmení, aktivity, hydratace</p>
+</div>
+
+<!-- 5. VRIJHEIDSGETAL -->
+<div id="panel-vrijheid" class="panel">
+  <p class="hint">🍼 Vrijheidsgetal — zásoby mléka</p>
+  <div class="vrijheid-wrap">
+    <div class="vr-hero">
+      <div class="vr-num" id="vr-num">0</div>
+      <div class="vr-label">dní zásoby mléka</div>
+      <div class="vr-sublabel">Vrijheidsgetal · RaisingSmall</div>
+    </div>
+
+    <div class="vr-bar-wrap">
+      <div class="vr-bar-header">
+        <span>🟢 Bezpečná zóna (7+ dní)</span>
+        <span id="vr-pct">0%</span>
+      </div>
+      <div class="vr-track">
+        <div class="vr-fill" id="vr-fill"
+          style="background: linear-gradient(90deg, #f87171, #fbbf24, #34d399)"></div>
+      </div>
+    </div>
+
+    <div class="vr-zones">
+      <div class="vr-zone" style="background:rgba(248,113,113,0.08);border-color:rgba(248,113,113,0.2)">
+        <div class="vr-zone-num" style="color:#f87171">0–2</div>
+        <div class="vr-zone-label">⚠️ Doplnit</div>
+      </div>
+      <div class="vr-zone" style="background:rgba(251,191,36,0.08);border-color:rgba(251,191,36,0.2)">
+        <div class="vr-zone-num" style="color:#fbbf24">3–6</div>
+        <div class="vr-zone-label">🟡 V pořádku</div>
+      </div>
+      <div class="vr-zone" style="background:rgba(52,211,153,0.08);border-color:rgba(52,211,153,0.2)">
+        <div class="vr-zone-num" style="color:#34d399">7+</div>
+        <div class="vr-zone-label">✅ Volnost!</div>
+      </div>
+    </div>
+  </div>
+  <button class="replay-btn" onclick="animateVrijheid()">↺ Znovu přehrát</button>
+  <p class="tip">→ Přesně tato funkce je v RaisingSmall — hezky animovaná!</p>
+</div>
+
+<script>
+/* ══ TABS ══ */
+function showPanel(name) {
+  document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+  document.getElementById("panel-" + name).classList.add("active");
+  event.target.classList.add("active");
+  if (name === "bars")     animateBars();
+  if (name === "ring")     animateRing();
+  if (name === "line")     animateLine();
+  if (name === "gauges")   { renderGauges(); setTimeout(animateGauges, 100); }
+  if (name === "vrijheid") animateVrijheid();
+}
+
+/* ══ 1. BAR CHART ══ */
+const barData = [
+  { day: "Po", hours: 7.5, color: "#7EC8E3" },
+  { day: "Út", hours: 5.2, color: "#f87171" },
+  { day: "St", hours: 8.1, color: "#34d399" },
+  { day: "Čt", hours: 6.8, color: "#7EC8E3" },
+  { day: "Pá", hours: 9.0, color: "#34d399" },
+  { day: "So", hours: 7.2, color: "#7EC8E3" },
+  { day: "Ne", hours: 8.5, color: "#a78bfa" },
+];
+const goalHours = 8;
+
+function renderBars() {
+  const max = 10;
+  const goalPct = (goalHours / max) * 100;
+  document.getElementById("bar-chart").innerHTML = barData.map((d, i) => `
+    <div class="bar-row">
+      <div class="bar-day">${d.day}</div>
+      <div class="bar-track">
+        <div class="bar-fill" id="bar-${i}"
+          style="background: linear-gradient(90deg, ${d.color}99, ${d.color})">
+        </div>
+        <div class="bar-goal-line" style="left:${goalPct}%"></div>
+      </div>
+      <div class="bar-label" style="color:${d.color}">${d.hours}h</div>
+    </div>`).join("");
+}
+
+function animateBars() {
+  renderBars();
+  const max = 10;
+  barData.forEach((d, i) => {
+    const el = document.getElementById("bar-" + i);
+    if (!el) return;
+    el.style.transition = "none"; el.style.width = "0%";
+    setTimeout(() => {
+      el.style.transition = `width 0.8s cubic-bezier(0.4,0,0.2,1) ${i * 0.08}s`;
+      el.style.width = (d.hours / max * 100) + "%";
+      el.textContent = d.hours + "h";
+    }, 50);
+  });
+}
+renderBars();
+setTimeout(animateBars, 200);
+
+/* ══ 2. RING ══ */
+function animateRing() {
+  const circumference = 2 * Math.PI * 65; // 408
+  // deep: 3h20m = 200min / 403min total = 49%
+  // light: 2h40m = 160min = 39%
+  // wake: 23min = 6%
+  const total = 383;
+  const deep  = 200 / total;
+  const light = 160 / total;
+  const wake  = 23  / total;
+
+  const deepEl  = document.getElementById("ring-deep");
+  const lightEl = document.getElementById("ring-light");
+  const wakeEl  = document.getElementById("ring-wake");
+
+  // reset
+  [deepEl, lightEl, wakeEl].forEach(el => {
+    if (el) { el.style.transition = "none"; el.style.strokeDashoffset = circumference; }
+  });
+
+  setTimeout(() => {
+    // deep: starts at 0, covers deep%
+    const deepDash  = circumference * (1 - deep);
+    const lightDash = circumference * (1 - (deep + light));
+    const wakeDash  = circumference * (1 - (deep + light + wake));
+
+    if (deepEl) {
+      deepEl.style.transition = "stroke-dashoffset 1.2s cubic-bezier(0.4,0,0.2,1)";
+      deepEl.style.strokeDashoffset = deepDash;
+    }
+    if (lightEl) {
+      lightEl.style.transition = "stroke-dashoffset 1.2s cubic-bezier(0.4,0,0.2,1) 0.4s";
+      lightEl.style.strokeDashoffset = lightDash;
+    }
+    if (wakeEl) {
+      wakeEl.style.transition = "stroke-dashoffset 1.2s cubic-bezier(0.4,0,0.2,1) 0.8s";
+      wakeEl.style.strokeDashoffset = wakeDash;
+    }
+  }, 100);
+
+  // count up center number
+  const numEl = document.getElementById("ring-num");
+  if (numEl) {
+    numEl.textContent = "0h";
+    const dur = 1600; const start = Date.now();
+    (function tick() {
+      const p = Math.min((Date.now() - start) / dur, 1);
+      const ease = 1 - Math.pow(1 - p, 3);
+      const mins = Math.round(ease * 383);
+      const h = Math.floor(mins / 60); const m = mins % 60;
+      numEl.textContent = h + "h " + (m > 0 ? m + "m" : "");
+      if (p < 1) requestAnimationFrame(tick);
+    })();
+  }
+}
+
+/* ══ 3. LINE CHART ══ */
+const lineData = [120, 180, 210, 290, 380, 430];
+
+function animateLine() {
+  const svg = document.getElementById("line-svg");
+  const W = 400; const H = 120;
+  const max = 500; const min = 0;
+  const pad = 20;
+
+  const pts = lineData.map((v, i) => ({
+    x: pad + (i / (lineData.length - 1)) * (W - pad * 2),
+    y: H - pad - ((v - min) / (max - min)) * (H - pad * 2)
+  }));
+
+  // line path
+  const d = pts.map((p, i) => (i === 0 ? `M ${p.x} ${p.y}` : `L ${p.x} ${p.y}`)).join(" ");
+  const area = d + ` L ${pts[pts.length-1].x} ${H} L ${pts[0].x} ${H} Z`;
+
+  document.getElementById("line-path").setAttribute("d", d);
+  document.getElementById("line-area").setAttribute("d", area);
+
+  // dots
+  document.getElementById("line-dots").innerHTML = pts.map((p, i) => `
+    <circle cx="${p.x}" cy="${p.y}" r="4" fill="#34d399"
+      style="opacity:0;transition:opacity 0.3s ease ${0.8 + i * 0.1}s"
+      id="ldot-${i}"/>`).join("");
+
+  // animate clip
+  const clipRect = document.getElementById("line-clip-rect");
+  clipRect.setAttribute("width", "0");
+  setTimeout(() => {
+    clipRect.style.transition = "width 1.4s cubic-bezier(0.4,0,0.2,1)";
+    clipRect.setAttribute("width", W);
+    setTimeout(() => {
+      lineData.forEach((_, i) => {
+        const dot = document.getElementById("ldot-" + i);
+        if (dot) dot.style.opacity = "1";
+      });
+    }, 800);
+  }, 100);
+
+  // count total
+  const totalEl = document.getElementById("lc-total");
+  if (totalEl) {
+    totalEl.textContent = "€0";
+    const dur = 1400; const start = Date.now();
+    (function tick() {
+      const p = Math.min((Date.now() - start) / dur, 1);
+      const ease = 1 - Math.pow(1 - p, 3);
+      totalEl.textContent = "€" + Math.round(ease * 430);
+      if (p < 1) requestAnimationFrame(tick);
+    })();
+  }
+}
+
+/* ══ 4. GAUGES ══ */
+const gaugeData = [
+  { emoji: "🌙", label: "Spánek", val: 78, color: "#7EC8E3", unit: "%" },
+  { emoji: "🍼", label: "Krmení", val: 62, color: "#a78bfa", unit: "%" },
+  { emoji: "💧", label: "Hydratace", val: 90, color: "#34d399", unit: "%" },
+  { emoji: "🚶", label: "Aktivita", val: 45, color: "#fbbf24", unit: "%" },
+];
+
+function renderGauges() {
+  document.getElementById("gauges-grid").innerHTML = gaugeData.map((g, i) => {
+    const r = 38; const circ = 2 * Math.PI * r;
+    return `<div class="gauge-card" onclick="animateGaugeSingle(${i})">
+      <div class="gauge-pos">
+        <svg width="100" height="100" viewBox="0 0 100 100">
+          <circle cx="50" cy="50" r="${r}" fill="none"
+            stroke="rgba(255,255,255,0.06)" stroke-width="10"/>
+          <circle id="gauge-arc-${i}" cx="50" cy="50" r="${r}" fill="none"
+            stroke="${g.color}" stroke-width="10" stroke-linecap="round"
+            stroke-dasharray="${circ}" stroke-dashoffset="${circ}"
+            transform="rotate(-90 50 50)"
+            style="transition: stroke-dashoffset 1s cubic-bezier(0.4,0,0.2,1) ${i*0.15}s;
+                   filter: drop-shadow(0 0 6px ${g.color}88)"/>
+        </svg>
+        <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center">
+          <div style="font-size:20px">${g.emoji}</div>
+          <div id="gauge-num-${i}" style="font-size:16px;font-weight:800;color:${g.color}">0%</div>
+        </div>
+      </div>
+      <div class="gauge-label">${g.label}</div>
+    </div>`;
+  }).join("");
+}
+
+function animateGauges() {
+  gaugeData.forEach((g, i) => animateGaugeSingle(i));
+}
+
+function animateGaugeSingle(i) {
+  const g = gaugeData[i];
+  const r = 38; const circ = 2 * Math.PI * r;
+  const arc = document.getElementById("gauge-arc-" + i);
+  const num = document.getElementById("gauge-num-" + i);
+  if (!arc || !num) return;
+  arc.style.transition = "none";
+  arc.style.strokeDashoffset = circ;
+  num.textContent = "0%";
+  setTimeout(() => {
+    arc.style.transition = `stroke-dashoffset 1s cubic-bezier(0.4,0,0.2,1)`;
+    arc.style.strokeDashoffset = circ * (1 - g.val / 100);
+    const dur = 900; const start = Date.now();
+    (function tick() {
+      const p = Math.min((Date.now() - start) / dur, 1);
+      num.textContent = Math.round((1 - Math.pow(1 - p, 3)) * g.val) + "%";
+      if (p < 1) requestAnimationFrame(tick);
+    })();
+  }, 50);
+}
+
+/* ══ 5. VRIJHEIDSGETAL ══ */
+function animateVrijheid() {
+  const target = 12;
+  const max = 14;
+  const pct = Math.min((target / max) * 100, 100);
+
+  const numEl  = document.getElementById("vr-num");
+  const fillEl = document.getElementById("vr-fill");
+  const pctEl  = document.getElementById("vr-pct");
+
+  if (numEl)  numEl.textContent  = "0";
+  if (pctEl)  pctEl.textContent  = "0%";
+  if (fillEl) { fillEl.style.transition = "none"; fillEl.style.width = "0%"; }
+
+  setTimeout(() => {
+    if (fillEl) {
+      fillEl.style.transition = "width 1.4s cubic-bezier(0.4,0,0.2,1)";
+      fillEl.style.width = pct + "%";
+    }
+    const dur = 1400; const start = Date.now();
+    (function tick() {
+      const p = Math.min((Date.now() - start) / dur, 1);
+      const ease = 1 - Math.pow(1 - p, 3);
+      const v = Math.round(ease * target);
+      if (numEl) numEl.textContent = v;
+      if (pctEl) pctEl.textContent = Math.round(ease * pct) + "%";
+      if (p < 1) requestAnimationFrame(tick);
+    })();
+  }, 100);
+}
+
+/* ══ INIT ══ */
+setTimeout(() => {
+  animateBars();
+  animateLine();
+  renderGauges();
+  animateVrijheid();
+}, 300);
+</script>
+</body>
+</html>

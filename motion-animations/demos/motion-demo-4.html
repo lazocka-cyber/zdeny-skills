@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Motion.dev — Parallax & 3D</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #0a0f1e;
+    font-family: -apple-system, system-ui, sans-serif;
+    color: #f0f4ff;
+    overflow-x: hidden;
+  }
+
+  /* ── STICKY NAV ── */
+  .sticky-nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    padding: 12px 20px;
+    display: flex; align-items: center; justify-content: space-between;
+    transition: background 0.3s, backdrop-filter 0.3s;
+  }
+  .sticky-nav.scrolled {
+    background: rgba(10,15,30,0.85);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(126,200,227,0.1);
+  }
+  .nav-logo {
+    font-size: 15px; font-weight: 800;
+    background: linear-gradient(90deg, #7EC8E3, #a78bfa);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .scroll-progress-bar {
+    position: fixed; top: 0; left: 0; right: 0; height: 3px; z-index: 200;
+    background: rgba(255,255,255,0.05);
+  }
+  .scroll-progress-fill {
+    height: 100%; width: 0%;
+    background: linear-gradient(90deg, #7EC8E3, #a78bfa, #34d399);
+    transition: width 0.1s linear;
+  }
+
+  /* ── SECTION BASE ── */
+  section {
+    min-height: 100vh;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 80px 20px 60px;
+    position: relative; overflow: hidden;
+  }
+
+  /* ── HERO ── */
+  #hero {
+    background: radial-gradient(ellipse at 50% 40%, #0d2244 0%, #0a0f1e 70%);
+  }
+  .hero-bg-circle {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(60px);
+    pointer-events: none;
+  }
+  .hero-title {
+    font-size: clamp(32px, 8vw, 60px);
+    font-weight: 900;
+    text-align: center;
+    line-height: 1.1;
+    background: linear-gradient(135deg, #fff 0%, #7EC8E3 50%, #a78bfa 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    will-change: transform;
+  }
+  .hero-sub {
+    font-size: 15px; color: #8892b0; text-align: center;
+    margin-top: 16px; max-width: 320px; line-height: 1.7;
+    will-change: transform;
+  }
+  .hero-badge {
+    margin-top: 28px;
+    padding: 12px 28px; border-radius: 50px;
+    background: linear-gradient(90deg, #7EC8E3, #a78bfa);
+    color: #0a0f1e; font-weight: 800; font-size: 15px;
+    box-shadow: 0 0 32px rgba(126,200,227,0.3);
+    will-change: transform;
+  }
+
+  /* floating emojis */
+  .float-emoji {
+    position: absolute; font-size: 28px;
+    animation: floatY 4s ease-in-out infinite;
+    pointer-events: none; opacity: 0.6;
+    will-change: transform;
+  }
+  @keyframes floatY {
+    0%,100% { transform: translateY(0) rotate(0deg); }
+    50%      { transform: translateY(-18px) rotate(8deg); }
+  }
+
+  /* ── CARDS 3D ── */
+  #cards3d {
+    background: linear-gradient(180deg, #0a0f1e 0%, #0d1530 100%);
+    gap: 20px;
+  }
+  .section-eyebrow {
+    font-size: 11px; letter-spacing: 4px; text-transform: uppercase;
+    color: #7EC8E3; margin-bottom: 10px; text-align: center;
+  }
+  .section-title {
+    font-size: clamp(22px, 5vw, 36px); font-weight: 800;
+    text-align: center; margin-bottom: 28px;
+    background: linear-gradient(90deg, #fff, #7EC8E3);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .cards-3d-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
+    width: 100%; max-width: 420px;
+  }
+  .card-3d {
+    border-radius: 18px; padding: 20px 16px;
+    border: 1px solid rgba(255,255,255,0.08);
+    cursor: pointer; position: relative; overflow: hidden;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    will-change: transform;
+    transform-style: preserve-3d;
+  }
+  .card-3d::before {
+    content: ""; position: absolute; inset: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, transparent 60%);
+    border-radius: inherit; pointer-events: none;
+  }
+  .card-3d .c3-emoji { font-size: 30px; margin-bottom: 8px; }
+  .card-3d .c3-title { font-size: 13px; font-weight: 700; }
+  .card-3d .c3-glow {
+    position: absolute; width: 80px; height: 80px;
+    border-radius: 50%; filter: blur(30px);
+    top: -20px; right: -20px; opacity: 0.4;
+    pointer-events: none;
+  }
+
+  /* ── PARALLAX LAYERS ── */
+  #parallax {
+    background: linear-gradient(180deg, #0d1530 0%, #0a0f1e 100%);
+    gap: 16px; position: relative;
+  }
+  .parallax-layer {
+    position: absolute; pointer-events: none;
+    will-change: transform;
+  }
+  .parallax-text-block {
+    position: relative; z-index: 2;
+    text-align: center; max-width: 340px;
+  }
+  .parallax-stat {
+    display: flex; gap: 20px; flex-wrap: wrap;
+    justify-content: center; position: relative; z-index: 2;
+  }
+  .pstat {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(126,200,227,0.15);
+    border-radius: 16px; padding: 16px 20px;
+    text-align: center; min-width: 100px;
+    will-change: transform;
+  }
+  .pstat-num { font-size: 28px; font-weight: 900; }
+  .pstat-label { font-size: 11px; color: #8892b0; margin-top: 3px; }
+
+  /* ── REVEAL ON SCROLL ── */
+  #reveal {
+    background: radial-gradient(ellipse at 50% 60%, #0d2035 0%, #0a0f1e 70%);
+    gap: 16px;
+  }
+  .reveal-item {
+    opacity: 0; width: 100%; max-width: 400px;
+    transition: opacity 0.6s ease, transform 0.6s cubic-bezier(0.34,1.2,0.64,1);
+  }
+  .reveal-item.reveal-left  { transform: translateX(-50px); }
+  .reveal-item.reveal-right { transform: translateX(50px); }
+  .reveal-item.reveal-up    { transform: translateY(40px); }
+  .reveal-item.reveal-scale { transform: scale(0.85); }
+  .reveal-item.visible {
+    opacity: 1 !important;
+    transform: translate(0) scale(1) !important;
+  }
+  .reveal-card {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(126,200,227,0.12);
+    border-radius: 16px; padding: 18px 20px;
+    display: flex; gap: 14px; align-items: center;
+  }
+  .reveal-card .rc-emoji { font-size: 28px; }
+  .reveal-card .rc-title { font-size: 15px; font-weight: 700; color: #7EC8E3; }
+  .reveal-card .rc-desc  { font-size: 12px; color: #8892b0; margin-top: 3px; }
+
+  /* ── MAGNETIC BUTTONS ── */
+  #magnetic {
+    background: linear-gradient(180deg, #0a0f1e 0%, #0d1530 100%);
+    gap: 24px;
+  }
+  .magnetic-wrap {
+    display: flex; flex-wrap: wrap; gap: 16px; justify-content: center;
+  }
+  .mag-btn {
+    padding: 14px 28px; border-radius: 50px; border: none;
+    font-size: 14px; font-weight: 700; cursor: pointer;
+    position: relative; overflow: hidden;
+    transition: transform 0.2s cubic-bezier(0.34,1.56,0.64,1);
+    will-change: transform;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .mag-btn::after {
+    content: ""; position: absolute; inset: 0;
+    background: rgba(255,255,255,0.15);
+    border-radius: inherit; opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .mag-btn:active::after { opacity: 1; }
+  .mag-btn:active { transform: scale(0.93) !important; }
+  .mag-btn.blue {
+    background: linear-gradient(135deg, #7EC8E3, #a78bfa);
+    color: #0a0f1e;
+    box-shadow: 0 4px 24px rgba(126,200,227,0.3);
+  }
+  .mag-btn.green {
+    background: linear-gradient(135deg, #34d399, #7EC8E3);
+    color: #0a0f1e;
+    box-shadow: 0 4px 24px rgba(52,211,153,0.3);
+  }
+  .mag-btn.ghost {
+    background: transparent;
+    color: #7EC8E3;
+    border: 2px solid rgba(126,200,227,0.4);
+  }
+  .magnetic-hint {
+    font-size: 12px; color: #4a5568; text-align: center;
+  }
+
+  /* tip labels */
+  .section-tip {
+    font-size: 11px; color: #4a5568; text-align: center;
+    margin-top: 20px; position: relative; z-index: 2;
+  }
+
+  @keyframes fadeDown {
+    from { opacity:0; transform:translateY(-16px); }
+    to   { opacity:1; transform:translateY(0); }
+  }
+
+  /* scroll hint */
+  .scroll-hint {
+    position: absolute; bottom: 24px; left: 50%;
+    transform: translateX(-50%);
+    font-size: 11px; color: #4a5568; text-align: center;
+    animation: fadeDown 1s ease 1s both;
+  }
+  .scroll-arrow {
+    display: block; text-align: center; font-size: 18px;
+    animation: bounceDown 1.5s ease-in-out infinite;
+  }
+  @keyframes bounceDown {
+    0%,100% { transform: translateY(0); }
+    50%      { transform: translateY(6px); }
+  }
+</style>
+</head>
+<body>
+
+<!-- Progress bar -->
+<div class="scroll-progress-bar">
+  <div class="scroll-progress-fill" id="spf"></div>
+</div>
+
+<!-- Nav -->
+<nav class="sticky-nav" id="nav">
+  <div class="nav-logo">🍼 RaisingSmall</div>
+  <div style="font-size:12px;color:#4a5568" id="nav-section">Scrolluj dolů ↓</div>
+</nav>
+
+<!-- ══ HERO ══ -->
+<section id="hero">
+  <div class="hero-bg-circle" style="width:300px;height:300px;background:#1a3a6a;top:-80px;left:-80px" id="blob1"></div>
+  <div class="hero-bg-circle" style="width:200px;height:200px;background:#2a1a5a;bottom:0;right:-60px" id="blob2"></div>
+
+  <div class="float-emoji" style="top:18%;left:8%;animation-delay:0s">🌙</div>
+  <div class="float-emoji" style="top:25%;right:10%;animation-delay:0.8s">🍼</div>
+  <div class="float-emoji" style="bottom:20%;left:12%;animation-delay:1.5s">⭐</div>
+  <div class="float-emoji" style="bottom:28%;right:8%;animation-delay:0.4s">💜</div>
+
+  <div class="hero-title" id="hero-title">Tvůj průvodce<br>prvními 4 lety</div>
+  <div class="hero-sub" id="hero-sub">AI Slaapcoach, sledování spánku a krmení — vše na jednom místě pro klidnější noci.</div>
+  <div class="hero-badge" id="hero-badge">Začít zdarma →</div>
+
+  <div class="scroll-hint">
+    Scrolluj dolů a sleduj parallax efekty
+    <span class="scroll-arrow">↓</span>
+  </div>
+</section>
+
+<!-- ══ 3D CARDS ══ -->
+<section id="cards3d">
+  <div class="section-eyebrow">Funkce appky</div>
+  <div class="section-title">Všechno co potřebuješ</div>
+  <div class="cards-3d-grid">
+    <div class="card-3d" style="background:linear-gradient(135deg,#0d2244,#091a33)" onmousemove="tilt3d(event,this)" onmouseleave="resetTilt(this)" ontouchstart="pulse3d(this)">
+      <div class="c3-glow" style="background:#7EC8E3"></div>
+      <div class="c3-emoji">🌙</div>
+      <div class="c3-title" style="color:#7EC8E3">Spánek</div>
+    </div>
+    <div class="card-3d" style="background:linear-gradient(135deg,#1a0d44,#130a33)" onmousemove="tilt3d(event,this)" onmouseleave="resetTilt(this)" ontouchstart="pulse3d(this)">
+      <div class="c3-glow" style="background:#a78bfa"></div>
+      <div class="c3-emoji">🤖</div>
+      <div class="c3-title" style="color:#a78bfa">AI Coach</div>
+    </div>
+    <div class="card-3d" style="background:linear-gradient(135deg,#0d3322,#091f17)" onmousemove="tilt3d(event,this)" onmouseleave="resetTilt(this)" ontouchstart="pulse3d(this)">
+      <div class="c3-glow" style="background:#34d399"></div>
+      <div class="c3-emoji">🍼</div>
+      <div class="c3-title" style="color:#34d399">Krmení</div>
+    </div>
+    <div class="card-3d" style="background:linear-gradient(135deg,#332200,#221800)" onmousemove="tilt3d(event,this)" onmouseleave="resetTilt(this)" ontouchstart="pulse3d(this)">
+      <div class="c3-glow" style="background:#fbbf24"></div>
+      <div class="c3-emoji">👶</div>
+      <div class="c3-title" style="color:#fbbf24">Milníky</div>
+    </div>
+  </div>
+  <p class="section-tip">→ Na desktopu najeď myší na kartu — na mobilu klepni</p>
+</section>
+
+<!-- ══ PARALLAX LAYERS ══ -->
+<section id="parallax">
+  <div class="parallax-layer" id="pl1" style="font-size:80px;opacity:0.04;top:10%;left:-20px">🌙</div>
+  <div class="parallax-layer" id="pl2" style="font-size:60px;opacity:0.05;bottom:15%;right:-10px">⭐</div>
+  <div class="parallax-layer" id="pl3" style="font-size:100px;opacity:0.03;top:40%;left:50%;transform:translateX(-50%)">🍼</div>
+
+  <div class="section-eyebrow">Statistiky</div>
+  <div class="section-title" style="position:relative;z-index:2">Čísla která mluví</div>
+
+  <div class="parallax-stat">
+    <div class="pstat" id="ps1">
+      <div class="pstat-num" style="color:#7EC8E3" id="ps1n">0</div>
+      <div class="pstat-label">rodin používá appku</div>
+    </div>
+    <div class="pstat" id="ps2">
+      <div class="pstat-num" style="color:#a78bfa" id="ps2n">0</div>
+      <div class="pstat-label">dotazů AI Coache denně</div>
+    </div>
+    <div class="pstat" id="ps3">
+      <div class="pstat-num" style="color:#34d399" id="ps3n">0</div>
+      <div class="pstat-label">hodin spánku sledováno</div>
+    </div>
+  </div>
+  <p class="section-tip" style="margin-top:24px">→ Parallax pozadí se pohybuje jinou rychlostí než obsah</p>
+</section>
+
+<!-- ══ REVEAL ON SCROLL ══ -->
+<section id="reveal">
+  <div class="section-eyebrow">Proč RaisingSmall</div>
+  <div class="section-title">Přijíždí při scrollování</div>
+
+  <div class="reveal-item reveal-left" data-reveal>
+    <div class="reveal-card">
+      <div class="rc-emoji">🏆</div>
+      <div><div class="rc-title">30 let zkušeností</div><div class="rc-desc">Juf Zdeni — učitelka MŠ v Amsterdamu</div></div>
+    </div>
+  </div>
+  <div class="reveal-item reveal-right" data-reveal style="transition-delay:0.1s">
+    <div class="reveal-card">
+      <div class="rc-emoji">🌍</div>
+      <div><div class="rc-title">Trojjazyčná appka</div><div class="rc-desc">Nederlands · English · Čeština</div></div>
+    </div>
+  </div>
+  <div class="reveal-item reveal-left" data-reveal style="transition-delay:0.2s">
+    <div class="reveal-card">
+      <div class="rc-emoji">🔒</div>
+      <div><div class="rc-title">Jednorázová platba</div><div class="rc-desc">€79 — žádné předplatné, doživotní přístup</div></div>
+    </div>
+  </div>
+  <div class="reveal-item reveal-scale" data-reveal style="transition-delay:0.3s">
+    <div class="reveal-card">
+      <div class="rc-emoji">🤖</div>
+      <div><div class="rc-title">AI Slaapcoach</div><div class="rc-desc">40 dotazů denně — vždy připravený</div></div>
+    </div>
+  </div>
+
+  <p class="section-tip">→ Každý prvek přijede z jiné strany</p>
+</section>
+
+<!-- ══ MAGNETIC ══ -->
+<section id="magnetic">
+  <div class="section-eyebrow">Interakce</div>
+  <div class="section-title">Magnetická tlačítka</div>
+  <div class="magnetic-wrap">
+    <button class="mag-btn blue" onmousemove="magnet(event,this)" onmouseleave="resetMag(this)">🚀 Koupit přístup</button>
+    <button class="mag-btn green" onmousemove="magnet(event,this)" onmouseleave="resetMag(this)">🍼 Vyzkoušet demo</button>
+    <button class="mag-btn ghost" onmousemove="magnet(event,this)" onmouseleave="resetMag(this)">💬 Více info</button>
+  </div>
+  <div class="magnetic-hint">Na desktopu se tlačítka přitahují k myši · Na mobilu reagují na dotyk</div>
+  <p class="section-tip">→ Magnetický efekt zvyšuje míru kliknutí na CTA tlačítka</p>
+</section>
+
+<script>
+/* ══ SCROLL PROGRESS + NAV ══ */
+const sections = ["hero","cards3d","parallax","reveal","magnetic"];
+const sectionNames = ["Hero","3D Karty","Parallax","Reveal","Magnetická tlačítka"];
+
+window.addEventListener("scroll", () => {
+  const scrolled = window.scrollY;
+  const total = document.body.scrollHeight - window.innerHeight;
+  document.getElementById("spf").style.width = (scrolled / total * 100) + "%";
+
+  // nav blur
+  document.getElementById("nav").classList.toggle("scrolled", scrolled > 40);
+
+  // nav section name
+  let current = 0;
+  sections.forEach((id, i) => {
+    const el = document.getElementById(id);
+    if (el && el.getBoundingClientRect().top < window.innerHeight * 0.5) current = i;
+  });
+  document.getElementById("nav-section").textContent = sectionNames[current];
+
+  // parallax
+  parallaxScroll(scrolled);
+
+  // reveal
+  revealOnScroll();
+
+  // stats counter
+  statsCounter();
+});
+
+/* ══ HERO PARALLAX ══ */
+function parallaxScroll(scrolled) {
+  // hero elements
+  const title = document.getElementById("hero-title");
+  const sub   = document.getElementById("hero-sub");
+  const badge = document.getElementById("hero-badge");
+  const blob1 = document.getElementById("blob1");
+  const blob2 = document.getElementById("blob2");
+
+  if (title) title.style.transform = `translateY(${scrolled * 0.25}px)`;
+  if (sub)   sub.style.transform   = `translateY(${scrolled * 0.18}px)`;
+  if (badge) badge.style.transform = `translateY(${scrolled * 0.12}px)`;
+  if (blob1) blob1.style.transform = `translateY(${scrolled * 0.4}px)`;
+  if (blob2) blob2.style.transform = `translateY(${scrolled * -0.3}px)`;
+
+  // parallax section layers
+  const sec = document.getElementById("parallax");
+  if (sec) {
+    const off = sec.getBoundingClientRect().top;
+    const pl1 = document.getElementById("pl1");
+    const pl2 = document.getElementById("pl2");
+    const pl3 = document.getElementById("pl3");
+    if (pl1) pl1.style.transform = `translateY(${off * 0.15}px)`;
+    if (pl2) pl2.style.transform = `translateY(${off * -0.12}px) translateX(-10px)`;
+    if (pl3) pl3.style.transform = `translateX(-50%) translateY(${off * 0.08}px)`;
+
+    // stats parallax
+    const ps1 = document.getElementById("ps1");
+    const ps2 = document.getElementById("ps2");
+    const ps3 = document.getElementById("ps3");
+    if (ps1) ps1.style.transform = `translateY(${off * 0.05}px)`;
+    if (ps2) ps2.style.transform = `translateY(${off * -0.04}px)`;
+    if (ps3) ps3.style.transform = `translateY(${off * 0.06}px)`;
+  }
+}
+
+/* ══ REVEAL ON SCROLL ══ */
+function revealOnScroll() {
+  document.querySelectorAll("[data-reveal]").forEach(el => {
+    const rect = el.getBoundingClientRect();
+    if (rect.top < window.innerHeight * 0.88) {
+      el.classList.add("visible");
+    }
+  });
+}
+
+/* ══ STATS COUNTER ══ */
+let statsDone = false;
+function statsCounter() {
+  if (statsDone) return;
+  const sec = document.getElementById("parallax");
+  if (!sec) return;
+  const rect = sec.getBoundingClientRect();
+  if (rect.top < window.innerHeight * 0.7) {
+    statsDone = true;
+    countTo("ps1n", 1247, 0, "");
+    countTo("ps2n", 340, 0, "");
+    countTo("ps3n", 8920, 0, "");
+  }
+}
+function countTo(id, target, decimals, suffix) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const dur = 1400; const start = Date.now();
+  (function tick() {
+    const p = Math.min((Date.now() - start) / dur, 1);
+    const ease = 1 - Math.pow(1 - p, 3);
+    el.textContent = Math.round(ease * target).toLocaleString("cs") + suffix;
+    if (p < 1) requestAnimationFrame(tick);
+  })();
+}
+
+/* ══ 3D CARD TILT ══ */
+function tilt3d(e, el) {
+  const r = el.getBoundingClientRect();
+  const x = (e.clientX - r.left) / r.width  - 0.5;
+  const y = (e.clientY - r.top)  / r.height - 0.5;
+  el.style.transform = `perspective(600px) rotateY(${x * 18}deg) rotateX(${-y * 18}deg) scale(1.04)`;
+  el.style.boxShadow = `${-x * 12}px ${-y * 12}px 30px rgba(126,200,227,0.2)`;
+}
+function resetTilt(el) {
+  el.style.transform = "perspective(600px) rotateY(0) rotateX(0) scale(1)";
+  el.style.boxShadow = "none";
+}
+function pulse3d(el) {
+  el.style.transform = "perspective(600px) scale(1.06)";
+  el.style.boxShadow = "0 0 30px rgba(126,200,227,0.25)";
+  setTimeout(() => resetTilt(el), 300);
+}
+
+/* ══ MAGNETIC BUTTONS ══ */
+function magnet(e, el) {
+  const r = el.getBoundingClientRect();
+  const x = (e.clientX - r.left - r.width  / 2) * 0.3;
+  const y = (e.clientY - r.top  - r.height / 2) * 0.3;
+  el.style.transform = `translate(${x}px, ${y}px) scale(1.06)`;
+}
+function resetMag(el) {
+  el.style.transform = "translate(0,0) scale(1)";
+}
+
+// trigger reveal for items already in view
+setTimeout(revealOnScroll, 300);
+</script>
+</body>
+</html>

@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Motion — Interaktivní Hry</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{min-height:100vh;background:#080c14;font-family:-apple-system,system-ui,sans-serif;color:#f0f4ff;padding:20px 14px 40px;overflow-x:hidden;}
+  .header{text-align:center;margin-bottom:22px;}
+  .header .label{font-size:10px;letter-spacing:5px;color:#fbbf24;text-transform:uppercase;margin-bottom:6px;}
+  .header h1{font-size:22px;font-weight:800;background:linear-gradient(90deg,#fbbf24,#f97316,#ec4899);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+  .tabs{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;margin-bottom:22px;scrollbar-width:none;}
+  .tabs::-webkit-scrollbar{display:none;}
+  .tab{flex-shrink:0;padding:8px 14px;border-radius:20px;border:none;cursor:pointer;font-size:12px;font-weight:600;background:rgba(255,255,255,0.07);color:#8892b0;transition:all .22s;-webkit-tap-highlight-color:transparent;}
+  .tab.active{background:linear-gradient(90deg,#fbbf24,#f97316);color:#0a0f1e;}
+  .panel{display:none;max-width:480px;margin:0 auto;}
+  .panel.active{display:block;animation:fadeIn .3s ease both;}
+  .hint{text-align:center;color:#8892b0;font-size:13px;margin-bottom:16px;}
+  .tip{text-align:center;font-size:11px;color:#2a2a3a;margin-top:14px;}
+  .canvas-wrap{border-radius:16px;overflow:hidden;}
+  canvas{display:block;width:100%;}
+  .ctrl-row{display:flex;gap:8px;margin-top:12px;justify-content:center;flex-wrap:wrap;}
+  .ctrl-btn{padding:8px 16px;border-radius:20px;border:1px solid rgba(251,191,36,0.2);background:transparent;color:#555;font-size:11px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:all .2s;-webkit-tap-highlight-color:transparent;}
+  .ctrl-btn:active,.ctrl-btn.active-ctrl{border-color:#fbbf24;color:#fbbf24;}
+  .big-btn{display:block;margin:12px auto;padding:13px 28px;border-radius:14px;border:none;background:linear-gradient(90deg,#fbbf24,#f97316);color:#0a0f1e;font-size:15px;font-weight:700;cursor:pointer;transition:transform .15s;-webkit-tap-highlight-color:transparent;}
+  .big-btn:active{transform:scale(.95);}
+  .result-box{background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.2);border-radius:14px;padding:16px;text-align:center;margin-top:12px;min-height:60px;display:flex;align-items:center;justify-content:center;}
+  @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+  @keyframes popIn{0%{transform:scale(0) rotate(-10deg)}60%{transform:scale(1.2) rotate(5deg)}100%{transform:scale(1) rotate(0deg)}}
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="label">Motion · Hry</div>
+  <h1>🎮 INTERACTIVE GAMES</h1>
+</div>
+<div class="tabs">
+  <button class="tab active" onclick="showPanel('scratch',this)">🎰 Stírací los</button>
+  <button class="tab" onclick="showPanel('wheel',this)">🎡 Kolo štěstí</button>
+  <button class="tab" onclick="showPanel('memory',this)">🧠 Memory</button>
+  <button class="tab" onclick="showPanel('quiz',this)">❓ Quiz</button>
+</div>
+
+<!-- SCRATCH CARD -->
+<div id="panel-scratch" class="panel active">
+  <p class="hint">Škrábej prstem — odhal výhru!</p>
+  <div class="canvas-wrap"><canvas id="c-scratch" height="240"></canvas></div>
+  <button class="big-btn" onclick="resetScratch()">🎰 Nový los</button>
+  <p class="tip">→ Slevový kód, překvapení, gamifikace onboardingu</p>
+</div>
+
+<!-- WHEEL -->
+<div id="panel-wheel" class="panel">
+  <p class="hint">Klepni Točit — vyhraj cenu!</p>
+  <div class="canvas-wrap"><canvas id="c-wheel" height="300"></canvas></div>
+  <button class="big-btn" id="spin-btn" onclick="spinWheel()">🎡 Točit!</button>
+  <div class="result-box" id="wheel-result"><span style="color:#8892b0;font-size:13px">Zatím jsi netočil...</span></div>
+  <p class="tip">→ Slevový kód, free trial, bonus esence, affiliate akce</p>
+</div>
+
+<!-- MEMORY -->
+<div id="panel-memory" class="panel">
+  <p class="hint">Najdi dvojice — otestuj paměť!</p>
+  <div id="memory-board" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px;"></div>
+  <div style="display:flex;justify-content:space-between;align-items:center;padding:0 4px">
+    <div style="font-size:13px;color:#8892b0">Tahy: <span id="move-count" style="color:#fbbf24;font-weight:700">0</span></div>
+    <div style="font-size:13px;color:#8892b0">Nalezeno: <span id="found-count" style="color:#34d399;font-weight:700">0</span>/6</div>
+  </div>
+  <button class="big-btn" onclick="initMemory()">↺ Nová hra</button>
+  <p class="tip">→ Gamifikace appky, onboarding hračka, user engagement</p>
+</div>
+
+<!-- QUIZ -->
+<div id="panel-quiz" class="panel">
+  <p class="hint">Mini kvíz o Bach esencích</p>
+  <div id="quiz-wrap"></div>
+  <p class="tip">→ Onboarding quiz, doporučení esencí, engagement</p>
+</div>
+
+<script>
+function rand(a,b){return a+Math.random()*(b-a)}
+function setupCanvas(id,h2=240){
+  const c=document.getElementById(id),dpr=window.devicePixelRatio||1;
+  const rect=c.parentElement.getBoundingClientRect();
+  c.width=rect.width*dpr; c.height=h2*dpr;
+  c.style.width=rect.width+"px"; c.style.height=h2+"px";
+  const ctx=c.getContext("2d"); ctx.scale(dpr,dpr);
+  return{canvas:c,ctx,w:rect.width,h:h2};
+}
+
+/* ══ SCRATCH ══ */
+const scratchPrizes=["🎉 -20% sleva!","🌿 Rescue Remedy ZDARMA","🔑 Bonus licence","💫 VIP přístup","🎁 E-book zdarma","⭐ +30 dní Premium"];
+let scratchPrize="";
+function initScratch(){
+  const{canvas,ctx,w,h}=setupCanvas("c-scratch");
+  scratchPrize=scratchPrizes[Math.floor(Math.random()*scratchPrizes.length)];
+  // draw prize underneath
+  ctx.fillStyle="#1a2a1a";ctx.fillRect(0,0,w,h);
+  ctx.font=`bold ${Math.min(w*0.07,26)}px sans-serif`;
+  ctx.textAlign="center";ctx.textBaseline="middle";
+  ctx.fillStyle="#34d399";
+  ctx.fillText("🏆 VÝHRA!",w/2,h/2-20);
+  ctx.fillStyle="#fbbf24";
+  ctx.font=`bold ${Math.min(w*0.055,20)}px sans-serif`;
+  ctx.fillText(scratchPrize,w/2,h/2+20);
+  // scratch overlay
+  const overlay=document.createElement("canvas");
+  overlay.width=canvas.width;overlay.height=canvas.height;
+  const ovCtx=overlay.getContext("2d");
+  const dpr=window.devicePixelRatio||1;
+  ovCtx.scale(dpr,dpr);
+  // gradient overlay
+  const grad=ovCtx.createLinearGradient(0,0,w,h);
+  grad.addColorStop(0,"#b45309");grad.addColorStop(1,"#92400e");
+  ovCtx.fillStyle=grad;ovCtx.fillRect(0,0,w,h);
+  ovCtx.font=`${Math.min(w*0.04,15)}px sans-serif`;
+  ovCtx.fillStyle="rgba(255,255,255,0.15)";ovCtx.textAlign="center";ovCtx.textBaseline="middle";
+  ovCtx.fillText("ŠKRÁBEJ ZDE →",w/2,h/2);
+  // draw overlay on main canvas
+  ctx.drawImage(overlay,0,0);
+  let scratching=false;
+  function scratch(x,y){
+    ctx.globalCompositeOperation="destination-out";
+    ctx.beginPath();ctx.arc(x,y,22,0,Math.PI*2);ctx.fill();
+    ctx.globalCompositeOperation="source-over";
+  }
+  canvas.addEventListener("mousedown",e=>{scratching=true;const r=canvas.getBoundingClientRect();scratch(e.clientX-r.left,e.clientY-r.top);});
+  canvas.addEventListener("mousemove",e=>{if(!scratching)return;const r=canvas.getBoundingClientRect();scratch(e.clientX-r.left,e.clientY-r.top);});
+  canvas.addEventListener("mouseup",()=>scratching=false);
+  canvas.addEventListener("touchstart",e=>{scratching=true;const r=canvas.getBoundingClientRect();scratch(e.touches[0].clientX-r.left,e.touches[0].clientY-r.top);e.preventDefault();},{passive:false});
+  canvas.addEventListener("touchmove",e=>{if(!scratching)return;const r=canvas.getBoundingClientRect();scratch(e.touches[0].clientX-r.left,e.touches[0].clientY-r.top);e.preventDefault();},{passive:false});
+  canvas.addEventListener("touchend",()=>scratching=false);
+}
+function resetScratch(){initScratch();}
+initScratch();
+
+/* ══ WHEEL ══ */
+const wheelSegments=[
+  {label:"-10%",color:"#7EC8E3"},{label:"Rescue\nZDARMA",color:"#34d399"},
+  {label:"Zkus\nznovu",color:"#4a5568"},{label:"-20%",color:"#fbbf24"},
+  {label:"E-book",color:"#a78bfa"},{label:"Zkus\nznovu",color:"#4a5568"},
+  {label:"VIP\nPřístup",color:"#f97316"},{label:"-5%",color:"#7EC8E3"},
+];
+let wheelAngle=0,wheelSpinning=false,wheelRAF;
+function initWheel(){
+  drawWheel(wheelAngle);
+}
+function drawWheel(angle){
+  const{canvas,ctx,w,h}=setupCanvas("c-wheel",300);
+  ctx.fillStyle="#080c14";ctx.fillRect(0,0,w,h);
+  const cx=w/2,cy=h/2-10,r=Math.min(w,h)*0.38;
+  const n=wheelSegments.length,arc=Math.PI*2/n;
+  wheelSegments.forEach((seg,i)=>{
+    const start=angle+i*arc-Math.PI/2,end=start+arc;
+    ctx.beginPath();ctx.moveTo(cx,cy);ctx.arc(cx,cy,r,start,end);ctx.closePath();
+    ctx.fillStyle=seg.color+"cc";ctx.fill();
+    ctx.strokeStyle="#080c14";ctx.lineWidth=2;ctx.stroke();
+    // label
+    const mid=start+arc/2;
+    ctx.save();ctx.translate(cx+Math.cos(mid)*r*0.65,cy+Math.sin(mid)*r*0.65);ctx.rotate(mid+Math.PI/2);
+    ctx.fillStyle="#fff";ctx.font=`bold ${Math.min(w*0.03,11)}px sans-serif`;ctx.textAlign="center";ctx.textBaseline="middle";
+    seg.label.split("\n").forEach((line,li)=>ctx.fillText(line,0,(li-0.5)*12));
+    ctx.restore();
+  });
+  // center
+  ctx.beginPath();ctx.arc(cx,cy,20,0,Math.PI*2);
+  const cg=ctx.createRadialGradient(cx,cy,0,cx,cy,20);
+  cg.addColorStop(0,"#fff");cg.addColorStop(1,"#aaa");
+  ctx.fillStyle=cg;ctx.fill();
+  // pointer
+  ctx.beginPath();ctx.moveTo(cx+r+8,cy);ctx.lineTo(cx+r-16,cy-10);ctx.lineTo(cx+r-16,cy+10);ctx.closePath();
+  ctx.fillStyle="#fbbf24";ctx.fill();
+}
+function spinWheel(){
+  if(wheelSpinning)return;
+  wheelSpinning=true;
+  document.getElementById("spin-btn").textContent="⏳ Točí se...";
+  document.getElementById("wheel-result").innerHTML=`<span style="color:#8892b0">Točí se...</span>`;
+  const extra=Math.PI*2*(5+Math.random()*5);
+  const target=wheelAngle+extra;
+  const start=performance.now(),dur=3500;
+  function tick(t){
+    const p=Math.min((t-start)/dur,1);
+    const ease=1-Math.pow(1-p,4);
+    wheelAngle=wheelAngle+(target-wheelAngle)*ease;
+    drawWheel(wheelAngle);
+    if(p<1){wheelRAF=requestAnimationFrame(tick);}
+    else{
+      wheelSpinning=false;
+      document.getElementById("spin-btn").textContent="🎡 Točit znovu!";
+      // find winning segment
+      const norm=((Math.PI*2)-(wheelAngle%(Math.PI*2)))%(Math.PI*2);
+      const idx=Math.floor(norm/(Math.PI*2/wheelSegments.length))%wheelSegments.length;
+      const winner=wheelSegments[idx];
+      document.getElementById("wheel-result").innerHTML=`<div style="animation:popIn .5s ease both"><div style="font-size:22px">🎉</div><div style="font-weight:700;color:${winner.color};font-size:15px">${winner.label.replace("\n"," ")}</div></div>`;
+    }
+  }
+  wheelRAF=requestAnimationFrame(tick);
+}
+initWheel();
+
+/* ══ MEMORY ══ */
+const memEmojis=["🌿","💜","🌸","🌻","🍀","🌙"];
+let memCards=[],memFlipped=[],memSolved=[],memMoves=0;
+function initMemory(){
+  const all=[...memEmojis,...memEmojis].sort(()=>Math.random()-0.5);
+  memCards=all;memFlipped=[];memSolved=[];memMoves=0;
+  document.getElementById("move-count").textContent="0";
+  document.getElementById("found-count").textContent="0";
+  const board=document.getElementById("memory-board");
+  board.innerHTML=all.map((e,i)=>`
+    <div onclick="flipCard(${i})" id="mc-${i}" style="height:70px;border-radius:12px;background:#1a2030;border:2px solid #2a3040;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:28px;transition:all .3s cubic-bezier(.34,1.56,.64,1);user-select:none;-webkit-tap-highlight-color:transparent;transform:scale(1)">
+      <span id="mc-face-${i}" style="opacity:0;transition:opacity .2s">?</span>
+    </div>`).join("");
+}
+function flipCard(i){
+  if(memFlipped.length>=2||memFlipped.includes(i)||memSolved.includes(i))return;
+  memFlipped.push(i);
+  const face=document.getElementById("mc-face-"+i);
+  const card=document.getElementById("mc-"+i);
+  face.textContent=memCards[i];face.style.opacity="1";
+  card.style.background="#1a3040";card.style.borderColor="#7EC8E3";
+  card.style.transform="scale(1.05)";
+  if(memFlipped.length===2){
+    memMoves++;
+    document.getElementById("move-count").textContent=memMoves;
+    const[a,b]=memFlipped;
+    if(memCards[a]===memCards[b]){
+      memSolved.push(a,b);
+      document.getElementById("found-count").textContent=memSolved.length/2;
+      [a,b].forEach(idx=>{const c=document.getElementById("mc-"+idx);c.style.background="rgba(52,211,153,0.15)";c.style.borderColor="#34d399";c.style.transform="scale(1)";});
+      memFlipped=[];
+      if(memSolved.length===memCards.length){
+        setTimeout(()=>alert(`🎉 Vyhrál(a) jsi za ${memMoves} tahů!`),300);
+      }
+    } else {
+      setTimeout(()=>{
+        [a,b].forEach(idx=>{
+          const face=document.getElementById("mc-face-"+idx);
+          const card=document.getElementById("mc-"+idx);
+          face.style.opacity="0";
+          card.style.background="#1a2030";card.style.borderColor="#2a3040";card.style.transform="scale(1)";
+        });
+        memFlipped=[];
+      },800);
+    }
+  }
+}
+initMemory();
+
+/* ══ QUIZ ══ */
+const quizQuestions=[
+  {q:"Cítíš se ohromená a potřebuješ klid a ochranu?",opts:["Rescue Remedy","Larch","Holly","Mimulus"],answer:0,color:"#7EC8E3"},
+  {q:"Bojíš se konkrétní věci nebo situace?",opts:["Aspen","Mimulus","Rock Rose","Cherry Plum"],answer:1,color:"#a78bfa"},
+  {q:"Pochybuješ o sobě a svých schopnostech?",opts:["Centaury","Larch","Cerato","Scleranthus"],answer:1,color:"#34d399"},
+];
+let quizIdx=0,quizScore=0;
+function renderQuiz(){
+  const wrap=document.getElementById("quiz-wrap");
+  if(quizIdx>=quizQuestions.length){
+    wrap.innerHTML=`
+      <div style="background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.2);border-radius:16px;padding:24px;text-align:center">
+        <div style="font-size:48px;margin-bottom:12px">${quizScore===3?"🏆":quizScore>=2?"🌟":"🌿"}</div>
+        <div style="font-size:18px;font-weight:700;color:#fbbf24;margin-bottom:8px">${quizScore}/3 správně!</div>
+        <div style="font-size:13px;color:#8892b0;margin-bottom:16px">${quizScore===3?"Expertka na Bach esence!":quizScore>=2?"Dobrá znalost esencí":"Ještě se učíš — to je v pořádku 🌿"}</div>
+        <button class="big-btn" onclick="quizIdx=0;quizScore=0;renderQuiz()">↺ Hrát znovu</button>
+      </div>`;
+    return;
+  }
+  const q=quizQuestions[quizIdx];
+  wrap.innerHTML=`
+    <div style="background:#0d1220;border:1px solid #1a2030;border-radius:16px;padding:18px;margin-bottom:12px">
+      <div style="font-size:11px;color:#4a5568;margin-bottom:10px;letter-spacing:1px">OTÁZKA ${quizIdx+1} / ${quizQuestions.length}</div>
+      <div style="font-size:15px;font-weight:600;color:#f0f4ff;line-height:1.5;margin-bottom:16px">${q.q}</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        ${q.opts.map((opt,i)=>`<button onclick="answerQuiz(${i})" style="padding:12px 16px;border-radius:12px;border:1px solid #2a3040;background:#111828;color:#f0f4ff;font-size:14px;cursor:pointer;text-align:left;transition:all .2s;-webkit-tap-highlight-color:transparent" onmouseover="this.style.borderColor='${q.color}'" onmouseout="this.style.borderColor='#2a3040'">${opt}</button>`).join("")}
+      </div>
+    </div>`;
+}
+function answerQuiz(i){
+  const q=quizQuestions[quizIdx];
+  const correct=i===q.answer;
+  if(correct)quizScore++;
+  const btns=document.querySelectorAll("#quiz-wrap button");
+  btns.forEach((b,bi)=>{
+    b.style.pointerEvents="none";
+    if(bi===q.answer)b.style.background="rgba(52,211,153,0.15)",b.style.borderColor="#34d399",b.style.color="#34d399";
+    else if(bi===i&&!correct)b.style.background="rgba(248,113,113,0.15)",b.style.borderColor="#f87171",b.style.color="#f87171";
+  });
+  setTimeout(()=>{quizIdx++;renderQuiz();},1000);
+}
+renderQuiz();
+
+/* ══ TABS ══ */
+function showPanel(name,btn){
+  cancelAnimationFrame(wheelRAF);
+  document.querySelectorAll(".panel").forEach(p=>p.classList.remove("active"));
+  document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
+  document.getElementById("panel-"+name).classList.add("active");
+  if(btn)btn.classList.add("active");
+  if(name==="scratch")initScratch();
+  if(name==="wheel")initWheel();
+  if(name==="memory")initMemory();
+  if(name==="quiz"){quizIdx=0;quizScore=0;renderQuiz();}
+}
+</script>
+</body>
+</html>

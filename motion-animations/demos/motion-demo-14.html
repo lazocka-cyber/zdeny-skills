@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Motion — Čísla & Data</title>
+<style>
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { min-height:100vh; background:#080c14; font-family:-apple-system,system-ui,sans-serif; color:#f0f4ff; padding:20px 14px 40px; overflow-x:hidden; }
+  .header { text-align:center; margin-bottom:22px; }
+  .header .label { font-size:10px; letter-spacing:5px; color:#34d399; text-transform:uppercase; margin-bottom:6px; }
+  .header h1 { font-size:22px; font-weight:800; background:linear-gradient(90deg,#34d399,#7EC8E3,#fbbf24); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+  .tabs { display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; margin-bottom:22px; scrollbar-width:none; }
+  .tabs::-webkit-scrollbar{display:none;}
+  .tab { flex-shrink:0; padding:8px 14px; border-radius:20px; border:none; cursor:pointer; font-size:12px; font-weight:600; background:rgba(255,255,255,0.07); color:#8892b0; transition:all .22s; -webkit-tap-highlight-color:transparent; }
+  .tab.active { background:linear-gradient(90deg,#34d399,#7EC8E3); color:#0a0f1e; }
+  .panel { display:none; max-width:480px; margin:0 auto; }
+  .panel.active { display:block; animation:fadeIn .3s ease both; }
+  .hint { text-align:center; color:#8892b0; font-size:13px; margin-bottom:16px; }
+  .tip  { text-align:center; font-size:11px; color:#2a3a2a; margin-top:14px; }
+  .canvas-wrap { border-radius:16px; overflow:hidden; }
+  canvas { display:block; width:100%; }
+  .ctrl-row { display:flex; gap:8px; margin-top:12px; justify-content:center; flex-wrap:wrap; }
+  .ctrl-btn { padding:8px 16px; border-radius:20px; border:1px solid rgba(52,211,153,0.2); background:transparent; color:#555; font-size:11px; letter-spacing:1px; text-transform:uppercase; cursor:pointer; transition:all .2s; -webkit-tap-highlight-color:transparent; }
+  .ctrl-btn:active,.ctrl-btn.active-ctrl { border-color:#34d399; color:#34d399; }
+  @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="label">Motion · Data</div>
+  <h1>NUMBERS & DATA</h1>
+</div>
+<div class="tabs">
+  <button class="tab active" onclick="showPanel('pie',this)">🥧 Koláč</button>
+  <button class="tab" onclick="showPanel('heat',this)">🌡 Heatmapa</button>
+  <button class="tab" onclick="showPanel('timeline',this)">📅 Timeline</button>
+  <button class="tab" onclick="showPanel('bubble',this)">🫧 Bubliny</button>
+  <button class="tab" onclick="showPanel('flow',this)">🌊 Flow</button>
+</div>
+
+<div id="panel-pie" class="panel active">
+  <p class="hint">Klepni na segment pro detail</p>
+  <div class="canvas-wrap"><canvas id="c-pie" height="320"></canvas></div>
+  <div class="ctrl-row">
+    <button class="ctrl-btn active-ctrl" onclick="setPieData(0,this)">Příjmy</button>
+    <button class="ctrl-btn" onclick="setPieData(1,this)">Spánek</button>
+    <button class="ctrl-btn" onclick="setPieData(2,this)">Esence</button>
+  </div>
+  <p class="tip">→ Přehled příjmů, složení spánku, výběr esencí</p>
+</div>
+
+<div id="panel-heat" class="panel">
+  <p class="hint">Heatmapa aktivity — pohybuj prstem</p>
+  <div class="canvas-wrap"><canvas id="c-heat" height="320"></canvas></div>
+  <div class="ctrl-row">
+    <button class="ctrl-btn active-ctrl" onclick="setHeatMode(0,this)">Týden</button>
+    <button class="ctrl-btn" onclick="setHeatMode(1,this)">Rok</button>
+  </div>
+  <p class="tip">→ GitHub-style aktivita, spánkový kalendář</p>
+</div>
+
+<div id="panel-timeline" class="panel">
+  <p class="hint">Scrolluj nebo klepni na bod</p>
+  <div class="canvas-wrap"><canvas id="c-timeline" height="320"></canvas></div>
+  <div class="ctrl-row">
+    <button class="ctrl-btn active-ctrl" onclick="setTimelineMode(0,this)">Vývoj appky</button>
+    <button class="ctrl-btn" onclick="setTimelineMode(1,this)">Příjmy</button>
+  </div>
+  <p class="tip">→ Roadmapa produktu, milníky projektu</p>
+</div>
+
+<div id="panel-bubble" class="panel">
+  <p class="hint">Klepni na bublinu pro detail</p>
+  <div class="canvas-wrap"><canvas id="c-bubble" height="320"></canvas></div>
+  <div class="ctrl-row">
+    <button class="ctrl-btn active-ctrl" onclick="setBubbleData(0,this)">Produkty</button>
+    <button class="ctrl-btn" onclick="setBubbleData(1,this)">Esence</button>
+  </div>
+  <p class="tip">→ Srovnání produktů, oblíbenost esencí</p>
+</div>
+
+<div id="panel-flow" class="panel">
+  <p class="hint">Tok dat — animovaný Sankey</p>
+  <div class="canvas-wrap"><canvas id="c-flow" height="320"></canvas></div>
+  <div class="ctrl-row">
+    <button class="ctrl-btn active-ctrl" onclick="setFlowData(0,this)">Příjmy</button>
+    <button class="ctrl-btn" onclick="setFlowData(1,this)">Uživatelé</button>
+  </div>
+  <p class="tip">→ Kde přicházejí zákazníci, tok konverzí</p>
+</div>
+
+<script>
+function lerp(a,b,t){return a+(b-a)*t}
+function easeOut(t){return 1-Math.pow(1-t,3)}
+function rand(a,b){return a+Math.random()*(b-a)}
+function setupCanvas(id){
+  const c=document.getElementById(id),dpr=window.devicePixelRatio||1;
+  const rect=c.parentElement.getBoundingClientRect();
+  c.width=rect.width*dpr; c.height=320*dpr;
+  c.style.width=rect.width+"px"; c.style.height="320px";
+  const ctx=c.getContext("2d"); ctx.scale(dpr,dpr);
+  return{canvas:c,ctx,w:rect.width,h:320};
+}
+
+/* PIE */
+let pieRAF,pieData=0,pieSelected=-1,pieProgress=0,pieStart=null;
+const pieSets=[
+  {label:"Příjmy",segs:[{l:"Gumroad",v:43,c:"#34d399"},{l:"Digistore",v:28,c:"#7EC8E3"},{l:"Google Play",v:15,c:"#a78bfa"},{l:"Affiliate",v:14,c:"#fbbf24"}]},
+  {label:"Spánek",segs:[{l:"Hluboký",v:49,c:"#7EC8E3"},{l:"Lehký",v:39,c:"#a78bfa"},{l:"REM",v:6,c:"#34d399"},{l:"Probuzení",v:6,c:"#f87171"}]},
+  {label:"Esence",segs:[{l:"Rescue",v:35,c:"#f59e0b"},{l:"Mimulus",v:25,c:"#34d399"},{l:"Larch",v:22,c:"#a78bfa"},{l:"Walnut",v:18,c:"#7EC8E3"}]},
+];
+function initPie(){
+  cancelAnimationFrame(pieRAF);
+  const{canvas,ctx,w,h}=setupCanvas("c-pie");
+  pieProgress=0; pieStart=null;
+  canvas.addEventListener("click",e=>{
+    const r=canvas.getBoundingClientRect(),mx=e.clientX-r.left,my=e.clientY-r.top;
+    const cx=w/2,cy=h*0.48,rad=Math.min(w,h)*0.3;
+    const dx=mx-cx,dy=my-cy,dist=Math.sqrt(dx*dx+dy*dy);
+    if(dist<rad&&dist>rad*0.25){
+      let angle=Math.atan2(dy,dx)+Math.PI/2;
+      if(angle<0)angle+=Math.PI*2;
+      let cum=0;
+      const segs=pieSets[pieData].segs;
+      const total=segs.reduce((s,x)=>s+x.v,0);
+      segs.forEach((seg,i)=>{
+        const start2=cum/total*Math.PI*2,end2=(cum+seg.v)/total*Math.PI*2;
+        if(angle>=start2&&angle<end2)pieSelected=pieSelected===i?-1:i;
+        cum+=seg.v;
+      });
+    }
+  });
+  canvas.addEventListener("touchstart",e=>{e.preventDefault();const ev=new MouseEvent("click",{clientX:e.touches[0].clientX,clientY:e.touches[0].clientY});canvas.dispatchEvent(ev);},{passive:false});
+  function tick(t){
+    if(!pieStart)pieStart=t;
+    pieProgress=Math.min((t-pieStart)/800,1);
+    ctx.clearRect(0,0,w,h);
+    ctx.fillStyle="#080c14"; ctx.fillRect(0,0,w,h);
+    const segs=pieSets[pieData].segs,total=segs.reduce((s,x)=>s+x.v,0);
+    const cx=w/2,cy=h*0.46,rad=Math.min(w,h)*0.28;
+    let cum=0;
+    segs.forEach((seg,i)=>{
+      const start2=(cum/total)*Math.PI*2*easeOut(pieProgress)-Math.PI/2;
+      const end2=((cum+seg.v)/total)*Math.PI*2*easeOut(pieProgress)-Math.PI/2;
+      const isSelected=pieSelected===i;
+      const offset=isSelected?10:0;
+      const mid=(start2+end2)/2;
+      ctx.beginPath();
+      ctx.moveTo(cx+Math.cos(mid)*offset,cy+Math.sin(mid)*offset);
+      ctx.arc(cx+Math.cos(mid)*offset,cy+Math.sin(mid)*offset,rad,start2,end2);
+      ctx.closePath();
+      ctx.fillStyle=seg.c+(isSelected?"ff":"cc");
+      ctx.fill();
+      ctx.strokeStyle="#080c14"; ctx.lineWidth=2; ctx.stroke();
+      // label
+      if(pieProgress>0.8&&end2-start2>0.3){
+        const lx=cx+Math.cos(mid)*offset+Math.cos(mid)*(rad*0.65);
+        const ly=cy+Math.sin(mid)*offset+Math.sin(mid)*(rad*0.65);
+        ctx.fillStyle="#fff"; ctx.font=`bold ${Math.min(w*0.035,13)}px sans-serif`;
+        ctx.textAlign="center"; ctx.textBaseline="middle";
+        ctx.fillText(seg.v+"%",lx,ly);
+      }
+      cum+=seg.v;
+    });
+    // center hole
+    ctx.beginPath(); ctx.arc(cx,cy,rad*0.28,0,Math.PI*2);
+    ctx.fillStyle="#080c14"; ctx.fill();
+    ctx.fillStyle=pieSelected>=0?segs[pieSelected].c:"#888";
+    ctx.font=`bold ${Math.min(w*0.04,15)}px sans-serif`;
+    ctx.textAlign="center"; ctx.textBaseline="middle";
+    ctx.fillText(pieSelected>=0?segs[pieSelected].l:pieSets[pieData].label,cx,cy-8);
+    ctx.font=`${Math.min(w*0.035,12)}px sans-serif`; ctx.fillStyle="#888";
+    ctx.fillText(pieSelected>=0?segs[pieSelected].v+"%":"celkem",cx,cy+10);
+    // legend
+    segs.forEach((seg,i)=>{
+      const lx=12,ly=h*0.78+i*22;
+      ctx.fillStyle=seg.c; ctx.fillRect(lx,ly-6,12,12);
+      ctx.fillStyle="#8892b0"; ctx.font=`${Math.min(w*0.03,11)}px sans-serif`;
+      ctx.textAlign="left"; ctx.textBaseline="middle";
+      ctx.fillText(seg.l,lx+16,ly);
+    });
+    pieRAF=requestAnimationFrame(tick);
+  }
+  pieRAF=requestAnimationFrame(tick);
+}
+function setPieData(d,btn){pieData=d;pieSelected=-1;pieProgress=0;pieStart=null;document.querySelectorAll("#panel-pie .ctrl-btn").forEach(b=>b.classList.remove("active-ctrl"));btn.classList.add("active-ctrl");}
+
+/* HEATMAP */
+let heatRAF,heatMode=0,heatMouse={x:-1,y:-1};
+function initHeat(){
+  cancelAnimationFrame(heatRAF);
+  const{canvas,ctx,w,h}=setupCanvas("c-heat");
+  canvas.addEventListener("mousemove",e=>{const r=canvas.getBoundingClientRect();heatMouse={x:e.clientX-r.left,y:e.clientY-r.top};});
+  canvas.addEventListener("touchmove",e=>{const r=canvas.getBoundingClientRect();heatMouse={x:e.touches[0].clientX-r.left,y:e.touches[0].clientY-r.top};e.preventDefault();},{passive:false});
+  canvas.addEventListener("mouseleave",()=>{heatMouse={x:-1,y:-1};});
+  const days=["Po","Út","St","Čt","Pá","So","Ne"];
+  const hours=Array.from({length:24},(_,i)=>i);
+  const data=Array.from({length:7},()=>Array.from({length:24},()=>Math.random()));
+  // more activity in morning/evening
+  data.forEach(row=>{row.forEach((v,i)=>{if(i>=22||i<=6)row[i]=v*0.3;if(i>=9&&i<=11)row[i]=Math.min(1,v*2);})});
+  function tick(t){
+    ctx.fillStyle="#080c14"; ctx.fillRect(0,0,w,h);
+    if(heatMode===0){
+      // week heatmap
+      const cellW=(w-50)/24,cellH=(h-40)/7;
+      days.forEach((d,di)=>{
+        ctx.fillStyle="#8892b0"; ctx.font=`${Math.min(cellH*0.6,11)}px sans-serif`;
+        ctx.textAlign="right"; ctx.textBaseline="middle";
+        ctx.fillText(d,44,40+di*cellH+cellH/2);
+        hours.forEach((hr,hi)=>{
+          const val=data[di][hi];
+          const hue=lerp(200,120,val);
+          const x=50+hi*cellW,y=40+di*cellH;
+          // hover highlight
+          const mx2=heatMouse.x,my2=heatMouse.y;
+          const isHover=mx2>=x&&mx2<x+cellW&&my2>=y&&my2<y+cellH;
+          ctx.fillStyle=isHover?"#fff":`hsla(${hue},80%,${30+val*40}%,${0.3+val*0.7})`;
+          ctx.fillRect(x+1,y+1,cellW-2,cellH-2);
+          if(isHover){
+            ctx.fillStyle="#fff"; ctx.font=`bold ${Math.min(cellH*0.55,10)}px sans-serif`;
+            ctx.textAlign="center"; ctx.fillText(hr+"h",x+cellW/2,y+cellH/2);
+          }
+        });
+      });
+      // hour labels
+      [0,6,12,18,23].forEach(hr=>{
+        ctx.fillStyle="#4a5568"; ctx.font=`10px sans-serif`;
+        ctx.textAlign="center"; ctx.fillText(hr+"h",50+hr*(w-50)/24,30);
+      });
+    } else {
+      // year view
+      const weeks=52,daysPerWeek=7;
+      const cw=(w-20)/weeks,ch=(h-60)/daysPerWeek;
+      for(let wk=0;wk<weeks;wk++){
+        for(let d=0;d<daysPerWeek;d++){
+          const val=Math.pow(Math.random(),2);
+          const x=10+wk*cw,y=30+d*ch;
+          const mx2=heatMouse.x,my2=heatMouse.y;
+          const hover=mx2>=x&&mx2<x+cw&&my2>=y&&my2<y+ch;
+          ctx.fillStyle=hover?"#fff":`hsla(${lerp(200,120,val)},80%,${20+val*45}%,${0.2+val*0.8})`;
+          ctx.fillRect(x+0.5,y+0.5,cw-1,ch-1);
+        }
+      }
+      ctx.fillStyle="#8892b0"; ctx.font="10px sans-serif"; ctx.textAlign="left";
+      ctx.fillText("52 týdnů aktivity v appce",10,20);
+    }
+    heatRAF=requestAnimationFrame(tick);
+  }
+  heatRAF=requestAnimationFrame(tick);
+}
+function setHeatMode(m,btn){heatMode=m;document.querySelectorAll("#panel-heat .ctrl-btn").forEach(b=>b.classList.remove("active-ctrl"));btn.classList.add("active-ctrl");}
+
+/* TIMELINE */
+let tlRAF,tlMode=0;
+function initTimeline(){
+  cancelAnimationFrame(tlRAF);
+  const{canvas,ctx,w,h}=setupCanvas("c-timeline");
+  const tlData=[
+    [{t:"Led '26",l:"RaisingSmall\nspuštěn",c:"#7EC8E3"},{t:"Bře '26",l:"Google Play\ntesting",c:"#a78bfa"},{t:"Kvě '26",l:"RaisingAmsterdam\nlive",c:"#34d399"},{t:"Čvn '26",l:"Mystická\nApatyka",c:"#fbbf24"}],
+    [{t:"€0",l:"Start",c:"#f87171"},{t:"€120",l:"Únor",c:"#fbbf24"},{t:"€280",l:"Březen",c:"#34d399"},{t:"€430",l:"Červen",c:"#7EC8E3"}],
+  ];
+  let prog=0,progStart=null,hovIdx=-1;
+  function tick(t){
+    if(!progStart)progStart=t;
+    prog=Math.min((t-progStart)/1200,1);
+    ctx.fillStyle="#080c14"; ctx.fillRect(0,0,w,h);
+    const data=tlData[tlMode];
+    const n=data.length,py=h*0.45;
+    const pad=w*0.1,spacing=(w-pad*2)/(n-1);
+    // line
+    ctx.strokeStyle="#1a2a3a"; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.moveTo(pad,py); ctx.lineTo(w-pad,py); ctx.stroke();
+    // animated line
+    ctx.strokeStyle="#7EC8E3"; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.moveTo(pad,py); ctx.lineTo(pad+(w-pad*2)*easeOut(prog),py); ctx.stroke();
+    data.forEach((item,i)=>{
+      const x=pad+i*spacing;
+      const p=easeOut(Math.max(0,(prog-(i/n)*0.5)/0.5));
+      if(p<=0)return;
+      // dot
+      ctx.beginPath(); ctx.arc(x,py,6*p,0,Math.PI*2);
+      ctx.fillStyle=item.c; ctx.fill();
+      ctx.strokeStyle="#080c14"; ctx.lineWidth=2; ctx.stroke();
+      // glow
+      ctx.beginPath(); ctx.arc(x,py,12*p,0,Math.PI*2);
+      ctx.fillStyle=item.c+"33"; ctx.fill();
+      // label
+      ctx.globalAlpha=p;
+      ctx.fillStyle="#f0f4ff"; ctx.font=`bold ${Math.min(w*0.035,12)}px sans-serif`;
+      ctx.textAlign="center"; ctx.textBaseline=i%2===0?"bottom":"top";
+      item.l.split("\n").forEach((line,li)=>{
+        ctx.fillText(line,x,py+(i%2===0?-20-li*14:20+li*14));
+      });
+      ctx.fillStyle=item.c; ctx.font=`${Math.min(w*0.03,10)}px sans-serif`;
+      ctx.fillText(item.t,x,py+(i%2===0?-55:55));
+      ctx.globalAlpha=1;
+    });
+    tlRAF=requestAnimationFrame(tick);
+  }
+  tlRAF=requestAnimationFrame(tick);
+}
+function setTimelineMode(m,btn){tlMode=m;document.querySelectorAll("#panel-timeline .ctrl-btn").forEach(b=>b.classList.remove("active-ctrl"));btn.classList.add("active-ctrl");tlRAF=0;cancelAnimationFrame(tlRAF);initTimeline();}
+
+/* BUBBLES */
+let bubbleRAF,bubbleData=0;
+function initBubble(){
+  cancelAnimationFrame(bubbleRAF);
+  const{canvas,ctx,w,h}=setupCanvas("c-bubble");
+  const sets=[
+    [{l:"RaisingSmall",v:60,c:"#7EC8E3"},{l:"RaisingAmst.",v:35,c:"#a78bfa"},{l:"E-books",v:20,c:"#34d399"},{l:"Kurzy",v:15,c:"#fbbf24"}],
+    [{l:"Rescue",v:55,c:"#f59e0b"},{l:"Mimulus",v:40,c:"#34d399"},{l:"Larch",v:30,c:"#a78bfa"},{l:"Walnut",v:25,c:"#7EC8E3"},{l:"Holly",v:18,c:"#f87171"}],
+  ];
+  const bubbles=sets[bubbleData].map((d,i)=>({
+    ...d, x:rand(w*0.2,w*0.8), y:rand(h*0.2,h*0.8),
+    vx:rand(-0.3,0.3), vy:rand(-0.3,0.3),
+    scale:0, targetScale:1,
+  }));
+  function tick(){
+    ctx.fillStyle="#080c14"; ctx.fillRect(0,0,w,h);
+    bubbles.forEach(b=>{
+      b.scale=lerp(b.scale,b.targetScale,0.06);
+      b.x+=b.vx; b.y+=b.vy;
+      const r=b.v*b.scale*0.9;
+      if(b.x<r||b.x>w-r)b.vx*=-1;
+      if(b.y<r||b.y>h-r)b.vy*=-1;
+      // bubble
+      ctx.beginPath(); ctx.arc(b.x,b.y,r,0,Math.PI*2);
+      ctx.fillStyle=b.c+"44"; ctx.fill();
+      ctx.strokeStyle=b.c+"88"; ctx.lineWidth=1.5; ctx.stroke();
+      // inner glow
+      const g=ctx.createRadialGradient(b.x-r*0.3,b.y-r*0.3,0,b.x,b.y,r);
+      g.addColorStop(0,b.c+"44"); g.addColorStop(1,"transparent");
+      ctx.fillStyle=g; ctx.beginPath(); ctx.arc(b.x,b.y,r,0,Math.PI*2); ctx.fill();
+      // label
+      if(r>20){
+        ctx.fillStyle="#fff"; ctx.font=`bold ${Math.min(r*0.28,13)}px sans-serif`;
+        ctx.textAlign="center"; ctx.textBaseline="middle";
+        ctx.fillText(b.l,b.x,b.y-4);
+        ctx.fillStyle=b.c; ctx.font=`${Math.min(r*0.22,11)}px sans-serif`;
+        ctx.fillText("€"+b.v+"0",b.x,b.y+10);
+      }
+    });
+    bubbleRAF=requestAnimationFrame(tick);
+  }
+  bubbleRAF=requestAnimationFrame(tick);
+}
+function setBubbleData(d,btn){bubbleData=d;document.querySelectorAll("#panel-bubble .ctrl-btn").forEach(b=>b.classList.remove("active-ctrl"));btn.classList.add("active-ctrl");initBubble();}
+
+/* FLOW */
+let flowRAF,flowData=0;
+function initFlow(){
+  cancelAnimationFrame(flowRAF);
+  const{canvas,ctx,w,h}=setupCanvas("c-flow");
+  const flows=[
+    {sources:[{l:"Gumroad",v:43,c:"#7EC8E3"},{l:"Digistore",v:28,c:"#a78bfa"},{l:"Affiliate",v:15,c:"#34d399"}],targets:[{l:"RaisingSmall",c:"#fbbf24"},{l:"Ebooks",c:"#f97316"}]},
+    {sources:[{l:"Facebook",v:50,c:"#4267B2"},{l:"Google",v:30,c:"#34d399"},{l:"Direct",v:20,c:"#a78bfa"}],targets:[{l:"Free",c:"#888"},{l:"Premium",c:"#fbbf24"}]},
+  ];
+  const particles=Array.from({length:60},()=>({t:Math.random(),src:Math.floor(Math.random()*3),speed:0.003+Math.random()*0.004}));
+  function tick(t){
+    ctx.fillStyle="#080c14"; ctx.fillRect(0,0,w,h);
+    const fl=flows[flowData];
+    const lx=30,rx=w-80;
+    // sources
+    fl.sources.forEach((s,i)=>{
+      const y=h*0.2+i*(h*0.6/(fl.sources.length-1||1));
+      ctx.fillStyle=s.c; ctx.fillRect(lx,y-15,10,30);
+      ctx.fillStyle="#8892b0"; ctx.font="11px sans-serif"; ctx.textAlign="left"; ctx.textBaseline="middle";
+      ctx.fillText(s.l,lx+14,y);
+    });
+    // targets
+    fl.targets.forEach((tg,i)=>{
+      const y=h*0.3+i*(h*0.4/(fl.targets.length-1||1));
+      ctx.fillStyle=tg.c; ctx.fillRect(rx,y-20,10,40);
+      ctx.fillStyle="#8892b0"; ctx.font="11px sans-serif"; ctx.textAlign="left"; ctx.textBaseline="middle";
+      ctx.fillText(tg.l,rx+14,y);
+    });
+    // flow paths + particles
+    particles.forEach(p=>{
+      p.t+=p.speed; if(p.t>1)p.t=0;
+      const si=p.src%fl.sources.length;
+      const ti=p.src%fl.targets.length;
+      const sy=h*0.2+si*(h*0.6/(fl.sources.length-1||1));
+      const ty=h*0.3+ti*(h*0.4/(fl.targets.length-1||1));
+      const cx2=w/2;
+      const px2=lerp(lerp(lx+10,cx2,p.t),lerp(cx2,rx,p.t),p.t);
+      const py2=lerp(lerp(sy,lerp(sy,ty,0.5),p.t),lerp(lerp(sy,ty,0.5),ty,p.t),p.t);
+      ctx.beginPath(); ctx.arc(px2,py2,2,0,Math.PI*2);
+      ctx.fillStyle=fl.sources[si].c+"cc"; ctx.fill();
+    });
+    flowRAF=requestAnimationFrame(tick);
+  }
+  flowRAF=requestAnimationFrame(tick);
+}
+function setFlowData(d,btn){flowData=d;document.querySelectorAll("#panel-flow .ctrl-btn").forEach(b=>b.classList.remove("active-ctrl"));btn.classList.add("active-ctrl");initFlow();}
+
+const inits={pie:initPie,heat:initHeat,timeline:initTimeline,bubble:initBubble,flow:initFlow};
+function showPanel(name,btn){
+  cancelAnimationFrame(pieRAF);cancelAnimationFrame(heatRAF);cancelAnimationFrame(tlRAF);cancelAnimationFrame(bubbleRAF);cancelAnimationFrame(flowRAF);
+  document.querySelectorAll(".panel").forEach(p=>p.classList.remove("active"));
+  document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
+  document.getElementById("panel-"+name).classList.add("active");
+  if(btn)btn.classList.add("active");
+  setTimeout(()=>inits[name]?.(),50);
+}
+setTimeout(initPie,200);
+</script>
+</body>
+</html>

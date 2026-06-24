@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Motion.dev — Více efektů</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #0a0f1e 0%, #0d1b35 100%);
+    font-family: -apple-system, system-ui, sans-serif;
+    color: #f0f4ff;
+    padding: 20px 14px 40px;
+  }
+
+  .header {
+    text-align: center;
+    margin-bottom: 24px;
+    animation: fadeDown 0.6s ease both;
+  }
+  .header .label {
+    font-size: 11px;
+    letter-spacing: 4px;
+    color: #7EC8E3;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .header h1 {
+    font-size: 24px;
+    font-weight: 800;
+    background: linear-gradient(90deg, #7EC8E3, #fff, #a78bfa);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  /* TABS - scrollable row */
+  .tabs {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    margin-bottom: 24px;
+    scrollbar-width: none;
+  }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab {
+    flex-shrink: 0;
+    padding: 8px 15px;
+    border-radius: 20px;
+    border: none;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    background: rgba(255,255,255,0.08);
+    color: #8892b0;
+    transition: all 0.22s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .tab.active {
+    background: linear-gradient(90deg, #7EC8E3, #a78bfa);
+    color: #0a0f1e;
+  }
+
+  .panel { display: none; max-width: 480px; margin: 0 auto; }
+  .panel.active { display: block; animation: fadeIn 0.3s ease both; }
+  .hint { text-align: center; color: #8892b0; font-size: 13px; margin-bottom: 18px; }
+  .tip { text-align: center; font-size: 11px; color: #4a5568; margin-top: 14px; }
+
+  /* ── 1. DRAG ── */
+  .drag-area {
+    background: rgba(255,255,255,0.04);
+    border: 2px dashed rgba(126,200,227,0.25);
+    border-radius: 20px;
+    height: 180px;
+    position: relative;
+    overflow: hidden;
+    touch-action: none;
+    cursor: grab;
+  }
+  .drag-ball {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #7EC8E3, #a78bfa);
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    cursor: grab;
+    box-shadow: 0 0 24px rgba(126,200,227,0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    user-select: none;
+    transition: box-shadow 0.2s;
+  }
+  .drag-ball:active { cursor: grabbing; box-shadow: 0 0 40px rgba(126,200,227,0.7); }
+  .drag-label { color: #4a5568; font-size: 11px; text-align: center; margin-top: 8px; }
+
+  /* ── 2. LAYOUT ANIMATE ── */
+  .layout-grid {
+    display: grid;
+    gap: 10px;
+  }
+  .layout-grid.cols-2 { grid-template-columns: 1fr 1fr; }
+  .layout-grid.cols-1 { grid-template-columns: 1fr; }
+  .layout-card {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(167,139,250,0.25);
+    border-radius: 14px;
+    padding: 14px 16px;
+    transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .layout-card .lc-emoji { font-size: 24px; margin-bottom: 6px; }
+  .layout-card .lc-title { font-weight: 700; color: #a78bfa; font-size: 14px; }
+  .layout-card .lc-desc { color: #8892b0; font-size: 12px; margin-top: 4px; display: none; }
+  .layout-card.expanded .lc-desc { display: block; }
+  .layout-toggle {
+    display: block;
+    margin: 0 auto 16px;
+    padding: 9px 22px;
+    border-radius: 12px;
+    border: none;
+    background: rgba(167,139,250,0.15);
+    color: #a78bfa;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 13px;
+    border: 1px solid rgba(167,139,250,0.3);
+    transition: background 0.2s;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* ── 3. SCROLL PROGRESS ── */
+  .scroll-bar-wrap {
+    background: rgba(255,255,255,0.06);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 14px;
+  }
+  .scroll-bar-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: #8892b0;
+    margin-bottom: 8px;
+  }
+  .scroll-bar-track {
+    height: 8px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .scroll-bar-fill {
+    height: 100%;
+    border-radius: 4px;
+    width: 0%;
+    transition: width 0.3s ease;
+  }
+  .scroll-content {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 16px;
+    padding: 16px;
+    height: 160px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(126,200,227,0.3) transparent;
+  }
+  .scroll-content p {
+    color: #8892b0;
+    font-size: 13px;
+    line-height: 1.8;
+    margin-bottom: 10px;
+  }
+
+  /* ── 4. GESTURES ── */
+  .gesture-box {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .g-btn {
+    padding: 16px 20px;
+    border-radius: 14px;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    transition: transform 0.15s, box-shadow 0.15s, background 0.2s;
+    -webkit-tap-highlight-color: transparent;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .g-btn:active { transform: scale(0.94); }
+  .g-btn.primary {
+    background: linear-gradient(90deg, #7EC8E3, #a78bfa);
+    color: #0a0f1e;
+    box-shadow: 0 4px 20px rgba(126,200,227,0.25);
+  }
+  .g-btn.primary:active { box-shadow: 0 2px 8px rgba(126,200,227,0.1); }
+  .g-btn.secondary {
+    background: rgba(255,255,255,0.06);
+    color: #f0f4ff;
+    border: 1px solid rgba(255,255,255,0.12);
+  }
+  .g-btn.danger {
+    background: rgba(239,68,68,0.12);
+    color: #f87171;
+    border: 1px solid rgba(239,68,68,0.25);
+  }
+  .g-btn .btn-icon { font-size: 20px; }
+  .g-btn .btn-text { flex: 1; text-align: left; }
+  .g-btn .btn-hint { font-size: 11px; font-weight: 400; opacity: 0.7; }
+
+  /* ── 5. NUMBER COUNTER ── */
+  .counters {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .counter-card {
+    background: rgba(255,255,255,0.05);
+    border-radius: 16px;
+    padding: 20px 14px;
+    text-align: center;
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+  .counter-num {
+    font-size: 36px;
+    font-weight: 800;
+    line-height: 1;
+    margin-bottom: 6px;
+  }
+  .counter-label { font-size: 12px; color: #8892b0; }
+  .counter-btn {
+    display: block;
+    margin: 0 auto;
+    padding: 10px 24px;
+    border-radius: 12px;
+    border: none;
+    background: linear-gradient(90deg, #34d399, #7EC8E3);
+    color: #0a0f1e;
+    font-weight: 700;
+    cursor: pointer;
+    font-size: 14px;
+    transition: transform 0.15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .counter-btn:active { transform: scale(0.95); }
+
+  /* ── 6. REORDER / SWIPE ── */
+  .reorder-list { display: flex; flex-direction: column; gap: 10px; }
+  .reorder-item {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(52,211,153,0.2);
+    border-radius: 14px;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    cursor: pointer;
+    transition: transform 0.2s, background 0.2s;
+    -webkit-tap-highlight-color: transparent;
+    position: relative;
+    overflow: hidden;
+  }
+  .reorder-item:active { transform: scale(0.97); }
+  .reorder-item.done {
+    background: rgba(52,211,153,0.08);
+    border-color: rgba(52,211,153,0.4);
+  }
+  .reorder-item.done .ri-title { text-decoration: line-through; color: #4a5568; }
+  .ri-handle { font-size: 18px; opacity: 0.4; }
+  .ri-emoji { font-size: 22px; }
+  .ri-title { flex: 1; font-size: 14px; font-weight: 600; transition: color 0.2s; }
+  .ri-check {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 2px solid rgba(52,211,153,0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    transition: background 0.2s, border-color 0.2s;
+    flex-shrink: 0;
+  }
+  .reorder-item.done .ri-check {
+    background: #34d399;
+    border-color: #34d399;
+  }
+
+  @keyframes fadeDown {
+    from { opacity: 0; transform: translateY(-16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  @keyframes countUp {
+    from { transform: translateY(20px); opacity: 0; }
+    to   { transform: translateY(0); opacity: 1; }
+  }
+  .count-anim { animation: countUp 0.4s cubic-bezier(0.34,1.56,0.64,1) both; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="label">Motion.dev — rozšířené demo</div>
+  <h1>Další efekty pro tvé appky</h1>
+</div>
+
+<div class="tabs">
+  <button class="tab active" onclick="showPanel('drag')">🎯 Drag</button>
+  <button class="tab" onclick="showPanel('layout')">📐 Layout</button>
+  <button class="tab" onclick="showPanel('scroll')">📜 Scroll</button>
+  <button class="tab" onclick="showPanel('gestures')">👆 Gesta</button>
+  <button class="tab" onclick="showPanel('counter')">🔢 Čísla</button>
+  <button class="tab" onclick="showPanel('reorder')">✅ Checklist</button>
+</div>
+
+<!-- 1. DRAG -->
+<div id="panel-drag" class="panel active">
+  <p class="hint">👆 Táhni kuličku prstem</p>
+  <div class="drag-area" id="dragArea">
+    <div class="drag-ball" id="dragBall">🍼</div>
+  </div>
+  <p class="drag-label">Kulička zůstane kde ji pustíš</p>
+  <p class="tip">→ Draggable prvky: posuvníky, karty na třídění, interaktivní mapy</p>
+</div>
+
+<!-- 2. LAYOUT -->
+<div id="panel-layout" class="panel">
+  <p class="hint">👆 Přepni zobrazení nebo klepni na kartu</p>
+  <button class="layout-toggle" id="layoutBtn" onclick="toggleLayout()">Přepnout na seznam</button>
+  <div class="layout-grid cols-2" id="layoutGrid">
+    <div class="layout-card" onclick="expandCard(this)">
+      <div class="lc-emoji">🌙</div>
+      <div class="lc-title">Spánek</div>
+      <div class="lc-desc">Sleduj délku spánku a přidej poznámky k probouzení.</div>
+    </div>
+    <div class="layout-card" onclick="expandCard(this)">
+      <div class="lc-emoji">🍼</div>
+      <div class="lc-title">Krmení</div>
+      <div class="lc-desc">Zaznamenej čas a délku každého krmení dítěte.</div>
+    </div>
+    <div class="layout-card" onclick="expandCard(this)">
+      <div class="lc-emoji">💊</div>
+      <div class="lc-title">Léky</div>
+      <div class="lc-desc">Připomínky na vitamíny a léky s dávkovacím schématem.</div>
+    </div>
+    <div class="layout-card" onclick="expandCard(this)">
+      <div class="lc-emoji">📊</div>
+      <div class="lc-title">Váha</div>
+      <div class="lc-desc">Graf růstu a váhy od narození po 4. rok věku.</div>
+    </div>
+  </div>
+  <p class="tip">→ Grid ↔ seznam přepínání pro babysitter karty v RaisingAmsterdam</p>
+</div>
+
+<!-- 3. SCROLL PROGRESS -->
+<div id="panel-scroll" class="panel">
+  <p class="hint">👆 Scrolluj v rámečku níže</p>
+  <div class="scroll-bar-wrap">
+    <div class="scroll-bar-label">
+      <span>Pokrok čtení</span>
+      <span id="scrollPct">0%</span>
+    </div>
+    <div class="scroll-bar-track">
+      <div class="scroll-bar-fill" id="scrollFill"
+        style="background: linear-gradient(90deg, #7EC8E3, #a78bfa)"></div>
+    </div>
+  </div>
+  <div class="scroll-content" id="scrollBox" onscroll="updateScroll()">
+    <p>🌙 Proč je spánek pro miminko tak důležitý?</p>
+    <p>Během prvního roku života spí dítě průměrně 14–17 hodin denně. Kvalitní spánek je klíčový pro vývoj mozku, imunitního systému a celkové zdraví.</p>
+    <p>🍼 Novorozenci (0–3 měsíce) spí 16–18 hodin, ale pouze v krátkých úsecích 2–4 hodiny.</p>
+    <p>🌟 Batolata (1–2 roky) potřebují 11–14 hodin denně včetně odpoledního spánku.</p>
+    <p>💡 Tip od Juf Zdeni: Pravidelný rituál před spaním — koupel, pohádka, stejná hodina — funguje lépe než jakékoli gadgety.</p>
+    <p>✨ Konec článku — skvělá práce! 🎉</p>
+  </div>
+  <p class="tip">→ Progress bar pro kurzy, čtení článků, onboarding kroky</p>
+</div>
+
+<!-- 4. GESTURES -->
+<div id="panel-gestures" class="panel">
+  <p class="hint">👆 Klepni na tlačítka — každé reaguje jinak</p>
+  <div class="gesture-box">
+    <button class="g-btn primary" onclick="springBtn(this)">
+      <span class="btn-icon">🚀</span>
+      <span class="btn-text">
+        Koupit přístup — €79
+        <div class="btn-hint">spring efekt • poskočí zpět</div>
+      </span>
+    </button>
+    <button class="g-btn secondary" onclick="pulseBtn(this)">
+      <span class="btn-icon">💬</span>
+      <span class="btn-text">
+        Kontaktovat babysitter
+        <div class="btn-hint">pulse efekt • klidný</div>
+      </span>
+    </button>
+    <button class="g-btn danger" onclick="shakeBtn(this)">
+      <span class="btn-icon">🗑️</span>
+      <span class="btn-text">
+        Smazat inzerát
+        <div class="btn-hint">shake efekt • varování</div>
+      </span>
+    </button>
+  </div>
+  <p class="tip">→ Různá gesta pro různé akce — uživatel instinktivně pozná závažnost</p>
+</div>
+
+<!-- 5. COUNTER -->
+<div id="panel-counter" class="panel">
+  <p class="hint">👆 Klepni na tlačítko — čísla se animují</p>
+  <div class="counters">
+    <div class="counter-card">
+      <div class="counter-num" id="cnt-sleep" style="color:#7EC8E3">0</div>
+      <div class="counter-label">hodin spánku</div>
+    </div>
+    <div class="counter-card">
+      <div class="counter-num" id="cnt-feed" style="color:#a78bfa">0</div>
+      <div class="counter-label">krmení dnes</div>
+    </div>
+    <div class="counter-card">
+      <div class="counter-num" id="cnt-days" style="color:#34d399">0</div>
+      <div class="counter-label">dní zásoby</div>
+    </div>
+    <div class="counter-card">
+      <div class="counter-num" id="cnt-users" style="color:#fbbf24">0</div>
+      <div class="counter-label">rodin v appce</div>
+    </div>
+  </div>
+  <button class="counter-btn" onclick="animateCounters()">▶ Spustit animaci</button>
+  <p class="tip">→ Dashboard statistiky, Vrijheidsgetal, onboarding čísla na landing page</p>
+</div>
+
+<!-- 6. CHECKLIST / REORDER -->
+<div id="panel-reorder" class="panel">
+  <p class="hint">👆 Klepni na položku pro splnění</p>
+  <div class="reorder-list" id="checklist"></div>
+  <p class="tip">→ Onboarding checklist, denní rutina, setup kroky v appce</p>
+</div>
+
+<script>
+/* ── TAB SWITCHING ── */
+function showPanel(name) {
+  document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+  document.getElementById("panel-" + name).classList.add("active");
+  event.target.classList.add("active");
+  if (name === "counter") animateCounters();
+  if (name === "reorder") renderChecklist();
+}
+
+/* ── DRAG ── */
+const ball = document.getElementById("dragBall");
+const area = document.getElementById("dragArea");
+let dragging = false, ox = 0, oy = 0, bx = 0, by = 0;
+
+function getCenter() {
+  const r = area.getBoundingClientRect();
+  return { x: r.width / 2 - 32, y: r.height / 2 - 32 };
+}
+
+ball.addEventListener("mousedown", e => {
+  dragging = true;
+  const r = ball.getBoundingClientRect();
+  ox = e.clientX - r.left; oy = e.clientY - r.top;
+  ball.style.cursor = "grabbing";
+  e.preventDefault();
+});
+ball.addEventListener("touchstart", e => {
+  dragging = true;
+  const t = e.touches[0];
+  const r = ball.getBoundingClientRect();
+  ox = t.clientX - r.left; oy = t.clientY - r.top;
+  e.preventDefault();
+}, { passive: false });
+
+document.addEventListener("mousemove", e => {
+  if (!dragging) return;
+  move(e.clientX, e.clientY);
+});
+document.addEventListener("touchmove", e => {
+  if (!dragging) return;
+  move(e.touches[0].clientX, e.touches[0].clientY);
+  e.preventDefault();
+}, { passive: false });
+
+function move(cx, cy) {
+  const ar = area.getBoundingClientRect();
+  bx = Math.max(0, Math.min(ar.width - 64, cx - ar.left - ox));
+  by = Math.max(0, Math.min(ar.height - 64, cy - ar.top - oy));
+  ball.style.left = bx + "px";
+  ball.style.top = by + "px";
+  ball.style.transform = "none";
+}
+
+document.addEventListener("mouseup", () => { dragging = false; ball.style.cursor = "grab"; });
+document.addEventListener("touchend", () => { dragging = false; });
+
+// Init position
+window.addEventListener("load", () => {
+  const c = getCenter();
+  ball.style.left = c.x + "px";
+  ball.style.top = c.y + "px";
+  ball.style.transform = "none";
+});
+
+/* ── LAYOUT ── */
+let isCols2 = true;
+function toggleLayout() {
+  isCols2 = !isCols2;
+  const grid = document.getElementById("layoutGrid");
+  const btn = document.getElementById("layoutBtn");
+  grid.className = "layout-grid " + (isCols2 ? "cols-2" : "cols-1");
+  btn.textContent = isCols2 ? "Přepnout na seznam" : "Přepnout na mřížku";
+}
+function expandCard(el) {
+  el.classList.toggle("expanded");
+}
+
+/* ── SCROLL PROGRESS ── */
+function updateScroll() {
+  const box = document.getElementById("scrollBox");
+  const pct = Math.round((box.scrollTop / (box.scrollHeight - box.clientHeight)) * 100);
+  document.getElementById("scrollFill").style.width = pct + "%";
+  document.getElementById("scrollPct").textContent = pct + "%";
+}
+
+/* ── GESTURES ── */
+function springBtn(el) {
+  el.style.transform = "scale(0.92)";
+  setTimeout(() => {
+    el.style.transition = "transform 0.5s cubic-bezier(0.34,1.56,0.64,1)";
+    el.style.transform = "scale(1)";
+    setTimeout(() => el.style.transition = "", 500);
+  }, 100);
+}
+function pulseBtn(el) {
+  el.style.transform = "scale(0.96)";
+  setTimeout(() => {
+    el.style.transition = "transform 0.3s ease";
+    el.style.transform = "scale(1)";
+    setTimeout(() => el.style.transition = "", 300);
+  }, 150);
+}
+function shakeBtn(el) {
+  let i = 0;
+  const shakes = [6, -6, 5, -5, 3, -3, 0];
+  function step() {
+    if (i >= shakes.length) return;
+    el.style.transform = `translateX(${shakes[i]}px)`;
+    i++;
+    setTimeout(step, 55);
+  }
+  step();
+}
+
+/* ── COUNTERS ── */
+function animateCounters() {
+  animateNum("cnt-sleep", 6.5, 1, true);
+  animateNum("cnt-feed", 8, 0);
+  animateNum("cnt-days", 12, 0);
+  animateNum("cnt-users", 1247, 0);
+}
+function animateNum(id, target, decimals, isFloat = false) {
+  const el = document.getElementById(id);
+  const dur = 1200;
+  const start = Date.now();
+  function tick() {
+    const p = Math.min((Date.now() - start) / dur, 1);
+    const ease = 1 - Math.pow(1 - p, 3);
+    const val = isFloat ? (ease * target).toFixed(decimals) : Math.round(ease * target);
+    el.textContent = val;
+    el.classList.remove("count-anim");
+    void el.offsetWidth;
+    el.classList.add("count-anim");
+    if (p < 1) requestAnimationFrame(tick);
+  }
+  tick();
+}
+
+/* ── CHECKLIST ── */
+const checkItems = [
+  { emoji: "📧", title: "Ověřit email adresu" },
+  { emoji: "🔑", title: "Zadat licenční klíč" },
+  { emoji: "👶", title: "Přidat profil dítěte" },
+  { emoji: "🌙", title: "Nastavit spánkový plán" },
+  { emoji: "🤖", title: "Vyzkoušet AI Slaapcoach" },
+];
+const done = {};
+function renderChecklist() {
+  const list = document.getElementById("checklist");
+  list.innerHTML = checkItems.map((item, i) => `
+    <div class="reorder-item ${done[i] ? 'done' : ''}" onclick="toggleItem(${i})">
+      <span class="ri-handle">⠿</span>
+      <span class="ri-emoji">${item.emoji}</span>
+      <span class="ri-title">${item.title}</span>
+      <span class="ri-check">${done[i] ? '✓' : ''}</span>
+    </div>
+  `).join("");
+}
+function toggleItem(i) {
+  done[i] = !done[i];
+  renderChecklist();
+}
+</script>
+</body>
+</html>

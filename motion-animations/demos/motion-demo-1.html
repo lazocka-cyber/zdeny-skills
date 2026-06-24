@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Motion.dev Demo</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #0a0f1e 0%, #0d1b35 100%);
+    font-family: -apple-system, system-ui, sans-serif;
+    color: #f0f4ff;
+    padding: 24px 16px;
+  }
+
+  /* HEADER */
+  .header {
+    text-align: center;
+    margin-bottom: 28px;
+    animation: fadeDown 0.6s ease both;
+  }
+  .header .label {
+    font-size: 11px;
+    letter-spacing: 4px;
+    color: #7EC8E3;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .header h1 {
+    font-size: 26px;
+    font-weight: 800;
+    background: linear-gradient(90deg, #7EC8E3, #fff, #a78bfa);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .header p {
+    color: #8892b0;
+    font-size: 13px;
+    margin-top: 8px;
+  }
+
+  /* TABS */
+  .tabs {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 28px;
+  }
+  .tab {
+    padding: 8px 16px;
+    border-radius: 20px;
+    border: none;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    background: rgba(255,255,255,0.08);
+    color: #8892b0;
+    transition: all 0.25s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .tab.active {
+    background: linear-gradient(90deg, #7EC8E3, #a78bfa);
+    color: #0a0f1e;
+  }
+
+  /* DEMO PANELS */
+  .panel { display: none; max-width: 480px; margin: 0 auto; }
+  .panel.active { display: block; animation: fadeIn 0.35s ease both; }
+  .hint {
+    text-align: center;
+    color: #8892b0;
+    font-size: 13px;
+    margin-bottom: 18px;
+  }
+  .tip {
+    text-align: center;
+    font-size: 11px;
+    color: #4a5568;
+    margin-top: 14px;
+  }
+
+  /* CARDS */
+  .card {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(126,200,227,0.2);
+    border-radius: 16px;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 12px;
+    transition: transform 0.2s, box-shadow 0.2s;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .card:active { transform: scale(0.97); }
+  .card-emoji { font-size: 30px; }
+  .card-body { flex: 1; }
+  .card-title { font-weight: 700; font-size: 15px; }
+  .card-desc { font-size: 13px; color: #8892b0; margin-top: 2px; }
+  .heart-btn {
+    background: none;
+    border: none;
+    font-size: 22px;
+    cursor: pointer;
+    filter: grayscale(1);
+    transition: transform 0.15s, filter 0.2s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .heart-btn.liked { filter: none; transform: scale(1.3); }
+
+  /* MODAL DEMO */
+  .toggle-btn {
+    display: block;
+    margin: 0 auto 24px;
+    padding: 12px 28px;
+    border-radius: 12px;
+    border: none;
+    background: linear-gradient(90deg, #7EC8E3, #a78bfa);
+    color: #0a0f1e;
+    font-weight: 700;
+    cursor: pointer;
+    font-size: 15px;
+    transition: transform 0.15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .toggle-btn:active { transform: scale(0.95); }
+
+  .modal-box {
+    background: rgba(126,200,227,0.1);
+    border: 1px solid rgba(126,200,227,0.25);
+    border-radius: 20px;
+    padding: 28px;
+    text-align: center;
+    transition: opacity 0.3s, transform 0.3s;
+  }
+  .modal-box.hidden {
+    opacity: 0;
+    transform: scale(0.88) translateY(16px);
+    pointer-events: none;
+  }
+  .modal-box .moon { font-size: 40px; margin-bottom: 12px; }
+  .modal-box h2 { font-weight: 700; font-size: 18px; color: #7EC8E3; margin-bottom: 8px; }
+  .modal-box p { color: #8892b0; font-size: 14px; line-height: 1.6; }
+
+  /* STEPS */
+  .step {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    margin-bottom: 14px;
+    background: rgba(255,255,255,0.04);
+    border-radius: 16px;
+    padding: 16px 18px;
+    border: 1px solid rgba(126,200,227,0.12);
+    opacity: 0;
+    transform: translateX(-30px);
+    transition: opacity 0.4s, transform 0.4s;
+  }
+  .step.visible { opacity: 1; transform: translateX(0); }
+  .step-emoji { font-size: 28px; }
+  .step-title { font-weight: 700; color: #7EC8E3; margin-bottom: 3px; font-size: 14px; }
+  .step-desc { color: #8892b0; font-size: 13px; }
+
+  /* GRID */
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .grid-card {
+    border-radius: 16px;
+    padding: 20px 14px;
+    text-align: center;
+    cursor: pointer;
+    transition: transform 0.2s;
+    opacity: 0;
+    transform: translateY(24px) scale(0.9);
+  }
+  .grid-card.visible { opacity: 1; transform: translateY(0) scale(1); }
+  .grid-card:active { transform: scale(0.95); }
+  .grid-card .g-emoji { font-size: 34px; margin-bottom: 8px; }
+  .grid-card .g-title { font-weight: 700; font-size: 13px; }
+  .grid-card .g-desc { color: #8892b0; font-size: 11px; margin-top: 4px; }
+
+  /* ANIMATIONS */
+  @keyframes fadeDown {
+    from { opacity: 0; transform: translateY(-20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="label">Motion.dev interaktivní demo</div>
+  <h1>Animace pro tvé appky</h1>
+  <p>Klikni na záložky a vyzkoušej každý efekt živě</p>
+</div>
+
+<div class="tabs">
+  <button class="tab active" onclick="showPanel('hover')">whileHover</button>
+  <button class="tab" onclick="showPanel('presence')">AnimatePresence</button>
+  <button class="tab" onclick="showPanel('inview')">whileInView</button>
+  <button class="tab" onclick="showPanel('stagger')">stagger</button>
+</div>
+
+<!-- PANEL 1: whileHover -->
+<div id="panel-hover" class="panel active">
+  <p class="hint">👆 Klepni na kartu nebo na ❤️</p>
+  <div id="cards-list"></div>
+  <p class="tip">→ Toto použiješ na karty babysitterů v RaisingAmsterdam</p>
+</div>
+
+<!-- PANEL 2: AnimatePresence -->
+<div id="panel-presence" class="panel">
+  <p class="hint">👆 Klepni na tlačítko — modal se plynule objeví/skryje</p>
+  <button class="toggle-btn" onclick="toggleModal()">Skrýt modal</button>
+  <div class="modal-box" id="modal-box">
+    <div class="moon">🌙</div>
+    <h2>Dobrá noc, maminko!</h2>
+    <p>Dnešní spánek byl 6h 23min.<br>Nejdelší úsek: 3h 10min. 🎉</p>
+  </div>
+  <p class="tip">→ Toto použiješ na modaly, pop-upy a toast notifikace</p>
+</div>
+
+<!-- PANEL 3: whileInView -->
+<div id="panel-inview" class="panel">
+  <p class="hint">✨ Prvky se animují při vstupu do výhledu</p>
+  <div id="steps-list"></div>
+  <p class="tip">→ Toto použiješ na landing page RaisingSmall</p>
+</div>
+
+<!-- PANEL 4: Stagger -->
+<div id="panel-stagger" class="panel">
+  <p class="hint">✨ Karty se objeví jedna po druhé</p>
+  <div class="grid" id="grid-list"></div>
+  <p class="tip">→ Toto použiješ na grid babysitterů nebo seznam funkcí</p>
+</div>
+
+<script>
+  const cards = [
+    { emoji: "🍼", title: "AI Slaapcoach", desc: "Personalized sleep advice", color: "#7EC8E3" },
+    { emoji: "🌙", title: "Sleep Tracker", desc: "Track naps and night sleep", color: "#a78bfa" },
+    { emoji: "🤱", title: "Feeding Log", desc: "Breastfeeding made simple", color: "#34d399" },
+    { emoji: "👶", title: "Milestones", desc: "Celebrate every achievement", color: "#fbbf24" },
+  ];
+
+  const steps = [
+    { emoji: "🍼", title: "Krok 1 — Kupte přístup", desc: "Jednorázový poplatek, doživotní přístup." },
+    { emoji: "📧", title: "Krok 2 — Obdržíte licenční klíč", desc: "Na email okamžitě po platbě." },
+    { emoji: "🚀", title: "Krok 3 — Aktivujte appku", desc: "Zadejte klíč a začněte hned." },
+    { emoji: "💬", title: "Krok 4 — Ptejte se AI Slaapcoache", desc: "40 dotazů denně zdarma." },
+  ];
+
+  // Render cards
+  const liked = {};
+  const cl = document.getElementById("cards-list");
+  cards.forEach((c, i) => {
+    cl.innerHTML += `
+      <div class="card" style="border-color:${c.color}33">
+        <div class="card-emoji">${c.emoji}</div>
+        <div class="card-body">
+          <div class="card-title" style="color:${c.color}">${c.title}</div>
+          <div class="card-desc">${c.desc}</div>
+        </div>
+        <button class="heart-btn" id="heart-${i}" onclick="toggleHeart(${i})">❤️</button>
+      </div>`;
+  });
+
+  function toggleHeart(i) {
+    liked[i] = !liked[i];
+    const btn = document.getElementById("heart-" + i);
+    btn.classList.toggle("liked", liked[i]);
+  }
+
+  // Render steps
+  const sl = document.getElementById("steps-list");
+  steps.forEach((s, i) => {
+    sl.innerHTML += `
+      <div class="step" id="step-${i}" style="transition-delay:${i * 0.1}s">
+        <div class="step-emoji">${s.emoji}</div>
+        <div>
+          <div class="step-title">${s.title}</div>
+          <div class="step-desc">${s.desc}</div>
+        </div>
+      </div>`;
+  });
+
+  // Render grid
+  const gl = document.getElementById("grid-list");
+  cards.forEach((c, i) => {
+    gl.innerHTML += `
+      <div class="grid-card" id="gc-${i}"
+        style="background:linear-gradient(135deg,${c.color}18,${c.color}08);border:1px solid ${c.color}44;transition-delay:${i*0.1}s">
+        <div class="g-emoji">${c.emoji}</div>
+        <div class="g-title" style="color:${c.color}">${c.title}</div>
+        <div class="g-desc">${c.desc}</div>
+      </div>`;
+  });
+
+  // Modal toggle
+  let modalVisible = true;
+  function toggleModal() {
+    const box = document.getElementById("modal-box");
+    const btn = document.querySelector(".toggle-btn");
+    modalVisible = !modalVisible;
+    box.classList.toggle("hidden", !modalVisible);
+    btn.textContent = modalVisible ? "Skrýt modal" : "Zobrazit modal";
+  }
+
+  // Tab switching
+  function showPanel(name) {
+    document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+    document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+    document.getElementById("panel-" + name).classList.add("active");
+    event.target.classList.add("active");
+
+    if (name === "inview") triggerSteps();
+    if (name === "stagger") triggerGrid();
+  }
+
+  function triggerSteps() {
+    steps.forEach((_, i) => {
+      setTimeout(() => {
+        document.getElementById("step-" + i)?.classList.add("visible");
+      }, i * 130);
+    });
+  }
+
+  function triggerGrid() {
+    cards.forEach((_, i) => {
+      setTimeout(() => {
+        document.getElementById("gc-" + i)?.classList.add("visible");
+      }, i * 120);
+    });
+  }
+
+  // Auto-trigger on load for active panel
+  setTimeout(triggerSteps, 200);
+</script>
+</body>
+</html>
