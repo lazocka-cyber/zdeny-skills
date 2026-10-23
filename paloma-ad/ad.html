@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="nl"><head><meta charset="utf-8">
+<title>Paloma – Live muziek met Filip & Friends</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<style>
+:root{--cream:#f4e7cf;--gold:#e0b25a;--wine:#7a1f1f;--olive:#2f4a33;--bg:#1a0d08}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:1080px;height:1920px;background:var(--bg);overflow:hidden}
+#stage{position:relative;width:1080px;height:1920px;overflow:hidden;
+  background:radial-gradient(ellipse at 70% 20%,#5a2a14 0%,#2a120a 55%,#120805 100%);
+  font-family:Georgia,'Times New Roman',serif;color:var(--cream)}
+.abs{position:absolute}
+#photo{left:0;top:0;width:1080px;height:1060px;
+  background:url(assets/filip.jpg) center 0%/cover;
+  -webkit-mask-image:linear-gradient(#000 60%,transparent 100%);mask-image:linear-gradient(#000 60%,transparent 100%)}
+#vig{left:0;top:0;width:1080px;height:1920px;
+  background:linear-gradient(180deg,rgba(18,8,5,.85) 0%,rgba(18,8,5,0) 22%,rgba(18,8,5,0) 40%,rgba(18,8,5,.92) 62%,#120805 100%)}
+.center{left:0;width:1080px;text-align:center}
+#logo{top:70px;font-size:96px;letter-spacing:22px;font-weight:700;padding-left:22px}
+#sub{top:190px;font-size:30px;letter-spacing:12px;color:var(--gold);padding-left:12px}
+#live{top:950px;font-size:88px;font-style:italic;color:var(--gold)}
+#filip{top:1020px;font-size:230px;font-weight:700;letter-spacing:6px;line-height:1;text-shadow:0 6px 30px rgba(0,0,0,.7)}
+#friends{top:1250px;font-size:78px;font-style:italic;color:var(--gold)}
+#nov{top:1365px;font-size:42px;letter-spacing:14px;color:var(--cream);padding-left:14px}
+.row{left:90px;width:900px;height:60px;display:flex;align-items:center;justify-content:space-between;
+  border-bottom:1px solid rgba(224,178,90,.35);font-size:44px}
+.row .d{display:flex;gap:18px;align-items:baseline}
+.row small{font-size:26px;letter-spacing:4px;color:var(--gold);width:190px}
+.row b{font-weight:700}
+.row .t{background:var(--olive);padding:4px 26px;border-radius:8px;font-size:40px;font-family:Georgia,serif;color:#fff}
+#cta{top:1825px;font-size:50px;font-style:italic;color:var(--gold)}
+#tags{top:1775px;font-size:26px;letter-spacing:6px;color:var(--cream);opacity:.85}
+</style></head><body>
+<div id="stage">
+  <div id="photo" class="abs"></div>
+  <div id="vig" class="abs"></div>
+  <div id="logo" class="abs center">PALOMA</div>
+  <div id="sub" class="abs center">RESTAURANT · UTRECHT</div>
+  <div id="live" class="abs center">Live muziek met</div>
+  <div id="filip" class="abs center">FILIP</div>
+  <div id="friends" class="abs center">&amp; Friends</div>
+  <div id="nov" class="abs center">NOVEMBER</div>
+  <div id="rows"></div>
+  <div id="tags" class="abs center">GOEDE MUZIEK · LEKKER ETEN · FIJNE SFEER</div>
+  <div id="cta" class="abs center">Kom genieten! ♥</div>
+</div>
+<script>
+const days=[["WOENSDAG","4 NOVEMBER","18:00"],["ZATERDAG","7 NOVEMBER","21:00"],["DONDERDAG","12 NOVEMBER","18:00"],["DINSDAG","17 NOVEMBER","18:00"],["DONDERDAG","26 NOVEMBER","18:00"]];
+const rows=document.getElementById('rows');
+days.forEach((d,i)=>{const e=document.createElement('div');e.className='row abs';e.style.top=(1430+i*66)+'px';
+ e.innerHTML=`<div class="d"><small>${d[0]}</small><b>${d[1]}</b></div><div class="t">${d[2]}</div>`;rows.appendChild(e)});
+const ease=x=>1-Math.pow(1-Math.min(Math.max(x,0),1),3);
+// seek(t): t in seconds, total 9s. Statický plakát = seek(99)
+function seek(t){
+  const el=id=>document.getElementById(id);
+  const inAt=(e,start,dur=.7,dy=40)=>{const p=ease((t-start)/dur);e.style.opacity=p;e.style.transform=`translateY(${(1-p)*dy}px)`};
+  const ph=el('photo');ph.style.transform=`scale(${1+Math.min(t,9)*0.012})`;
+  inAt(el('logo'),.2);inAt(el('sub'),.5);inAt(el('live'),1.0);
+  const f=el('filip'),p=ease((t-1.4)/.8);f.style.opacity=p;f.style.transform=`scale(${1.25-.25*p})`;
+  inAt(el('friends'),2.0);inAt(el('nov'),2.8);
+  [...rows.children].forEach((r,i)=>inAt(r,3.2+i*.45,.6,30));
+  inAt(el('tags'),5.8);
+  const c=el('cta');inAt(c,6.4);if(t>7)c.style.transform=`scale(${1+.04*Math.sin((t-7)*6)})`;
+}
+seek(99);
+</script></body></html>
