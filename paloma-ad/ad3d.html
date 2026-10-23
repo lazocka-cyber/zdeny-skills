@@ -34,7 +34,7 @@ html,body{width:1080px;height:1920px;background:var(--bg);overflow:hidden}
 <div id="stage">
   <div id="photo" class="abs"></div>
   <div id="vig" class="abs"></div>
-  <canvas id="gl" class="abs" width="1080" height="1920" style="left:0;top:0;mix-blend-mode:screen"></canvas>
+  <canvas id="gl" class="abs" width="1080" height="1920" style="display:none"></canvas>
   <div id="logo" class="abs center">PALOMA</div>
   <div id="sub" class="abs center">RESTAURANT · UTRECHT</div>
   <div id="live" class="abs center">Live muziek met</div>
@@ -81,9 +81,11 @@ function seek(t){
   const el=id=>document.getElementById(id);
   const inAt=(e,start,dur=.7,dy=60)=>{const p=bounce((t-start)/dur);e.style.opacity=Math.min(1,Math.max(0,(t-start)/.35));e.style.transform=`translateY(${(1-p)*dy}px)`};
   const ph=el('photo'),tt=Math.min(t,9);
-  ph.style.transform=`scale(${1.04+tt*.022}) translate(${Math.sin(tt*.5)*6}px,${-tt*3}px)`;
+  const BP=.418,B0=.18,ph0=((tt-B0)%BP+BP)%BP,punch=tt>B0?Math.exp(-ph0*9):0;
+  const zz=tt/9,ez=zz*zz*(3-2*zz);
+  ph.style.transform=`scale(${(1.0+.38*ez)*(1+.055*punch)}) translate(${Math.sin(tt*.9)*10}px,${-tt*6}px)`;
   inAt(el('logo'),.2);inAt(el('sub'),.5);inAt(el('live'),1.0);
-  const f=el('filip'),p=bounce((t-1.4)/.9);f.style.opacity=Math.min(1,Math.max(0,(t-1.4)/.3));f.style.transform=`scale(${1.5-.5*p})`;
+  const f=el('filip'),p=bounce((t-1.4)/.9);f.style.opacity=Math.min(1,Math.max(0,(t-1.4)/.3));f.style.transform=`scale(${(1.5-.5*p)*(t>3?1+.025*punch:1)})`;
   const sh=(t>2.4&&t<4.4)?Math.sin((t-2.4)/2*Math.PI):0;
   f.style.filter=`brightness(${1+.35*sh}) drop-shadow(0 0 ${40*sh}px rgba(255,214,120,${.9*sh}))`;
   inAt(el('friends'),2.0);inAt(el('nov'),2.8);
@@ -91,7 +93,6 @@ function seek(t){
   inAt(el('tags'),5.8);
   const c=el('cta');inAt(c,6.4);if(t>7)c.style.transform=`scale(${1+.05*Math.sin((t-7)*6)})`;
   el('logo').style.textShadow=`0 0 ${20+14*Math.sin(t*2)}px rgba(224,178,90,.55)`;
-  updGL(Math.min(t,9));
 }
 seek(99);
 </script></body></html>
